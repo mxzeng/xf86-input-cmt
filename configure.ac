@@ -76,5 +76,6 @@ AC_SUBST([DRIVER_NAME])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile
+                 include/Makefile
                  xorg-cmt.pc])
 AC_OUTPUT
