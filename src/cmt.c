@@ -33,16 +33,6 @@ static Bool DeviceOn(DeviceIntPtr);
 static Bool DeviceOff(DeviceIntPtr);
 static Bool DeviceClose(DeviceIntPtr);
 
-
-/*
- * xf86IDrvMsg is not introducted until ABI12.
- * Until then, manually prepend our module name to the format string.
- */
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-#define xf86IDrvMsg(info, x, ...) \
-    xf86Msg((x), "cmt: " __VA_ARGS__)
-#endif
-
 /**
  * X Input driver information and PreInit / UnInit routines
  */
@@ -126,7 +116,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 static void
 UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
-    CmtDevicePtr device = info->private;
+    CmtDevicePtr cmt = info->private;
 
     xf86IDrvMsg(info, X_INFO, "UnInit\n");
 }
