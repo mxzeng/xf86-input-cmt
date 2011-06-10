@@ -8,13 +8,16 @@
 #include "config.h"
 #endif
 
-#include <X11/Xatom.h>
+#include "cmt.h"
+
 #include <X11/extensions/XI.h>
+#include <X11/Xatom.h>
+#include <xf86.h>
 #include <xf86Xinput.h>
 #include <xorg-server.h>
 #include <xserver-properties.h>
 
-#include "cmt.h"
+#include "properties.h"
 
 /**
  * Forward declarations
@@ -32,6 +35,7 @@ static Bool DeviceInit(DeviceIntPtr);
 static Bool DeviceOn(DeviceIntPtr);
 static Bool DeviceOff(DeviceIntPtr);
 static Bool DeviceClose(DeviceIntPtr);
+
 
 /**
  * X Input driver information and PreInit / UnInit routines
@@ -150,6 +154,7 @@ ReadInput(InputInfoPtr info)
     xf86IDrvMsg(info, X_INFO, "ReadInput\n");
 }
 
+
 /**
  * device control event handlers
  */
@@ -161,7 +166,7 @@ DeviceInit(DeviceIntPtr dev)
 
     xf86IDrvMsg(info, X_INFO, "Init\n");
 
-    return Success;
+    return PropertyInit(dev);
 }
 
 static Bool

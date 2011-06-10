@@ -9,6 +9,8 @@
 
 #include <xf86.h>
 
+#include "properties.h"
+
 /*
  * xf86IDrvMsg is not introduced until ABI12.
  * Until then, manually prepend our module name to the format string.
@@ -18,10 +20,12 @@
     xf86Msg((x), "cmt: " __VA_ARGS__)
 #endif
 
+
 typedef struct {
     char* device;
+    long  handlers;
 
-    Bool tap_to_click;
+    CmtProperties props;
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif
