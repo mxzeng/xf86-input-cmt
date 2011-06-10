@@ -24,6 +24,19 @@ static int PropertyDel(DeviceIntPtr, Atom);
 
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
 
+
+/**
+ * Process Configuration Options
+ */
+void
+ProcessConfOptions(InputInfoPtr info, pointer opts)
+{
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
+
+    /* TODO: Initialize device 'props' from xorg 'opts' */
+}
+
 /**
  * Initialize Device Properties
  */

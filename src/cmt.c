@@ -112,6 +112,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     info->switch_mode             = NULL;  /* Only support Absolute mode */
     info->private                 = cmt;
 
+    ProcessConfOptions(info, info->options);
     xf86ProcessCommonOptions(info, info->options);
 
     return Success;

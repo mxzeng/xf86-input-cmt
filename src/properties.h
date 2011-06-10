@@ -24,5 +24,6 @@ typedef struct {
 } CmtProperties, *CmtPropertiesPtr;
 
 int PropertyInit(DeviceIntPtr);
+void ProcessConfOptions(InputInfoPtr, pointer);
 
 #endif
