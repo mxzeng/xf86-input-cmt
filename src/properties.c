@@ -20,6 +20,7 @@
 
 /* Property Atoms */
 Atom prop_tap_to_click;
+Atom prop_motion_speed;
 
 static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
@@ -28,6 +29,7 @@ static int PropertyDel(DeviceIntPtr, Atom);
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
 
 static void PropInit_TapToClick(DeviceIntPtr, CmtPropertiesPtr);
+static void PropInit_MotionSpeed(DeviceIntPtr, CmtPropertiesPtr);
 
 
 /**
@@ -42,6 +44,9 @@ ProcessConfOptions(InputInfoPtr info, pointer opts)
     /* Initialize device 'props' from xorg 'opts' */
     props->tap_to_click = xf86SetBoolOption(opts, CMT_CONF_TAPTOCLICK,
                                             CMT_DEF_TAPTOCLICK);
+
+    props->motion_speed = xf86SetIntOption(opts, CMT_CONF_MOTION_SPEED,
+                                           CMT_DEF_MOTION_SPEED);
 }
 
 /**
@@ -61,6 +66,7 @@ PropertyInit(DeviceIntPtr dev)
 
     /* Create and initialize Device Properties and their Atoms */
     PropInit_TapToClick(dev, props);
+    PropInit_MotionSpeed(dev, props);
 
     return Success;
 }
@@ -85,6 +91,14 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
 
         if (!checkonly)
             props->tap_to_click = *(BOOL*)prop->data;
+
+    } else if (atom == prop_motion_speed) {
+        if (prop->type != XA_INTEGER || prop->format != 32 || prop->size != 1)
+            return BadMatch;
+
+        if (!checkonly)
+            props->motion_speed = *(INT32*)prop->data;
+
     }
 
     return Success;
@@ -128,4 +142,13 @@ PropInit_TapToClick(DeviceIntPtr dev, CmtPropertiesPtr props)
 
     vals[0] = (uint8_t)props->tap_to_click;
     prop_tap_to_click = PropMake_Int(dev, CMT_PROP_TAPTOCLICK, 8, 1, vals);
+}
+
+static void
+PropInit_MotionSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
+{
+    uint32_t vals[1];
+
+    vals[0] = (uint32_t)props->motion_speed;
+    prop_motion_speed = PropMake_Int(dev, CMT_PROP_MOTION_SPEED, 32, 1, vals);
 }

@@ -21,9 +21,12 @@
 #define CMT_CONF_TAPTOCLICK "Tap To Click"
 #define CMT_DEF_TAPTOCLICK  FALSE
 
+#define CMT_CONF_MOTION_SPEED "Motion Speed"
+#define CMT_DEF_MOTION_SPEED  100
 
 typedef struct {
     Bool tap_to_click;
+    int  motion_speed;
 } CmtProperties, *CmtPropertiesPtr;
 
 int PropertyInit(DeviceIntPtr);
