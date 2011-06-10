@@ -22,6 +22,7 @@
 Atom prop_tap_to_click;
 Atom prop_motion_speed;
 Atom prop_scroll_speed;
+Atom prop_active_area;
 
 static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
@@ -32,6 +33,7 @@ static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
 static void PropInit_TapToClick(DeviceIntPtr, CmtPropertiesPtr);
 static void PropInit_MotionSpeed(DeviceIntPtr, CmtPropertiesPtr);
 static void PropInit_ScrollSpeed(DeviceIntPtr, CmtPropertiesPtr);
+static void PropInit_ActiveArea(DeviceIntPtr, CmtPropertiesPtr);
 
 
 /**
@@ -55,6 +57,22 @@ ProcessConfOptions(InputInfoPtr info, pointer opts)
 
     props->scroll_speed_h = xf86SetIntOption(opts, CMT_CONF_SCROLL_SPEED_H,
                                              CMT_DEF_SCROLL_SPEED_H);
+
+    /*
+     * TODO(djkurtz): initialize based on x/y valuator min/max,
+     * as reported by kernel driver.
+     */
+    props->area_left = xf86SetIntOption(opts, CMT_CONF_AREA_LEFT,
+                                        CMT_DEF_AREA_LEFT);
+
+    props->area_right = xf86SetIntOption(opts, CMT_CONF_AREA_RIGHT,
+                                         CMT_DEF_AREA_RIGHT);
+
+    props->area_top = xf86SetIntOption(opts, CMT_CONF_AREA_TOP,
+                                       CMT_DEF_AREA_TOP);
+
+    props->area_bottom = xf86SetIntOption(opts, CMT_CONF_AREA_BOTTOM,
+                                          CMT_DEF_AREA_BOTTOM);
 }
 
 /**
@@ -76,6 +94,7 @@ PropertyInit(DeviceIntPtr dev)
     PropInit_TapToClick(dev, props);
     PropInit_MotionSpeed(dev, props);
     PropInit_ScrollSpeed(dev, props);
+    PropInit_ActiveArea(dev, props);
 
     return Success;
 }
@@ -117,6 +136,16 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
             props->scroll_speed_h = ((INT32*)prop->data)[1];
         }
 
+    } else if (atom == prop_active_area) {
+        if (prop->type != XA_INTEGER || prop->format != 32 || prop->size != 4)
+            return BadMatch;
+
+        if (!checkonly) {
+            props->area_left   = ((INT32*)prop->data)[0];
+            props->area_right  = ((INT32*)prop->data)[1];
+            props->area_top    = ((INT32*)prop->data)[2];
+            props->area_bottom = ((INT32*)prop->data)[3];
+        }
     }
 
     return Success;
@@ -179,4 +208,16 @@ PropInit_ScrollSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
     vals[0] = (uint32_t)props->scroll_speed_v;
     vals[1] = (uint32_t)props->scroll_speed_h;
     prop_scroll_speed = PropMake_Int(dev, CMT_PROP_SCROLL_SPEED, 32, 2, vals);
+}
+
+static void
+PropInit_ActiveArea(DeviceIntPtr dev, CmtPropertiesPtr props)
+{
+    uint32_t vals[4];
+
+    vals[0] = (uint32_t)props->area_left;
+    vals[1] = (uint32_t)props->area_right;
+    vals[2] = (uint32_t)props->area_top;
+    vals[3] = (uint32_t)props->area_bottom;
+    prop_active_area = PropMake_Int(dev, CMT_PROP_AREA, 32, 4, vals);
 }

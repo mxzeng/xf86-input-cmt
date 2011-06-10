@@ -22,4 +22,7 @@
 /* 32 bit, 2 values, vertical, horizontal */
 #define CMT_PROP_SCROLL_SPEED "Scroll Speed"
 
+/* 32 bit, 4 values, left, right, top, bottom */
+#define CMT_PROP_AREA "Active Area"
+
 #endif
