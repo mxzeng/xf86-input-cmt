@@ -18,11 +18,16 @@
 #include "cmt.h"
 #include "cmt-properties.h"
 
+/* Property Atoms */
+Atom prop_tap_to_click;
+
 static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
 static int PropertyDel(DeviceIntPtr, Atom);
 
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
+
+static void PropInit_TapToClick(DeviceIntPtr, CmtPropertiesPtr);
 
 
 /**
@@ -34,7 +39,9 @@ ProcessConfOptions(InputInfoPtr info, pointer opts)
     CmtDevicePtr cmt = info->private;
     CmtPropertiesPtr props = &cmt->props;
 
-    /* TODO: Initialize device 'props' from xorg 'opts' */
+    /* Initialize device 'props' from xorg 'opts' */
+    props->tap_to_click = xf86SetBoolOption(opts, CMT_CONF_TAPTOCLICK,
+                                            CMT_DEF_TAPTOCLICK);
 }
 
 /**
@@ -52,7 +59,8 @@ PropertyInit(DeviceIntPtr dev)
     if (cmt->handlers == 0)
         return BadAlloc;
 
-    /* TODO: Create and initialize Device Properties and their Atoms */
+    /* Create and initialize Device Properties and their Atoms */
+    PropInit_TapToClick(dev, props);
 
     return Success;
 }
@@ -70,6 +78,14 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
 
     xf86IDrvMsg(info, X_INFO, "PropertySet: %s (%d)\n", NameForAtom(atom),
                 (int)atom);
+
+    if (atom == prop_tap_to_click) {
+        if (prop->type != XA_INTEGER || prop->format != 8 || prop->size != 1)
+            return BadMatch;
+
+        if (!checkonly)
+            props->tap_to_click = *(BOOL*)prop->data;
+    }
 
     return Success;
 }
@@ -100,4 +116,16 @@ PropMake_Int(DeviceIntPtr dev, char* name, int size, int len, pointer vals)
     XISetDevicePropertyDeletable(dev, atom, FALSE);
 
     return atom;
+}
+
+/**
+ * Device Property Initializers
+ */
+static void
+PropInit_TapToClick(DeviceIntPtr dev, CmtPropertiesPtr props)
+{
+    uint8_t vals[1];
+
+    vals[0] = (uint8_t)props->tap_to_click;
+    prop_tap_to_click = PropMake_Int(dev, CMT_PROP_TAPTOCLICK, 8, 1, vals);
 }

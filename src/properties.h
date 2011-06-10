@@ -18,9 +18,12 @@
  *              used if not set in .conf file.
  */
 
+#define CMT_CONF_TAPTOCLICK "Tap To Click"
+#define CMT_DEF_TAPTOCLICK  FALSE
+
 
 typedef struct {
-    /* TBD */
+    Bool tap_to_click;
 } CmtProperties, *CmtPropertiesPtr;
 
 int PropertyInit(DeviceIntPtr);
