@@ -102,7 +102,8 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 
     xf86IDrvMsg(info, X_INFO, "NewPreInit\n");
 
-    if (!(cmt = calloc(1, sizeof(*cmt))))
+    cmt = calloc(1, sizeof(*cmt));
+    if (!cmt)
         return BadAlloc;
 
     info->type_name               = XI_TOUCHPAD;
@@ -121,9 +122,20 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 static void
 UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
-    CmtDevicePtr cmt = info->private;
+    CmtDevicePtr cmt;
+
+    if (!info)
+        return;
 
     xf86IDrvMsg(info, X_INFO, "UnInit\n");
+
+    cmt = info->private;
+    if (cmt) {
+        free(cmt->device);
+        free(cmt);
+    }
+    info->private = NULL;
+    xf86DeleteInput(info, flags);
 }
 
 /**
