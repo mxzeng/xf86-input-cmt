@@ -22,10 +22,10 @@
 
 
 typedef struct {
+    CmtProperties props;
+
     char* device;
     long  handlers;
-
-    CmtProperties props;
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif

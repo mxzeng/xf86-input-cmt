@@ -30,10 +30,10 @@ static int PropertyDel(DeviceIntPtr, Atom);
 
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
 
-static void PropInit_TapToClick(DeviceIntPtr, CmtPropertiesPtr);
-static void PropInit_MotionSpeed(DeviceIntPtr, CmtPropertiesPtr);
-static void PropInit_ScrollSpeed(DeviceIntPtr, CmtPropertiesPtr);
-static void PropInit_ActiveArea(DeviceIntPtr, CmtPropertiesPtr);
+static void PropInit_TapToClick(DeviceIntPtr);
+static void PropInit_MotionSpeed(DeviceIntPtr);
+static void PropInit_ScrollSpeed(DeviceIntPtr);
+static void PropInit_ActiveArea(DeviceIntPtr);
 
 
 /**
@@ -83,7 +83,6 @@ PropertyInit(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
 
     cmt->handlers = XIRegisterPropertyHandler(info->dev, PropertySet,
                                               PropertyGet, PropertyDel);
@@ -91,10 +90,10 @@ PropertyInit(DeviceIntPtr dev)
         return BadAlloc;
 
     /* Create and initialize Device Properties and their Atoms */
-    PropInit_TapToClick(dev, props);
-    PropInit_MotionSpeed(dev, props);
-    PropInit_ScrollSpeed(dev, props);
-    PropInit_ActiveArea(dev, props);
+    PropInit_TapToClick(dev);
+    PropInit_MotionSpeed(dev);
+    PropInit_ScrollSpeed(dev);
+    PropInit_ActiveArea(dev);
 
     return Success;
 }
@@ -183,8 +182,11 @@ PropMake_Int(DeviceIntPtr dev, char* name, int size, int len, pointer vals)
  * Device Property Initializers
  */
 static void
-PropInit_TapToClick(DeviceIntPtr dev, CmtPropertiesPtr props)
+PropInit_TapToClick(DeviceIntPtr dev)
 {
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
     uint8_t vals[1];
 
     vals[0] = (uint8_t)props->tap_to_click;
@@ -192,8 +194,11 @@ PropInit_TapToClick(DeviceIntPtr dev, CmtPropertiesPtr props)
 }
 
 static void
-PropInit_MotionSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
+PropInit_MotionSpeed(DeviceIntPtr dev)
 {
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
     uint32_t vals[1];
 
     vals[0] = (uint32_t)props->motion_speed;
@@ -201,8 +206,11 @@ PropInit_MotionSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
 }
 
 static void
-PropInit_ScrollSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
+PropInit_ScrollSpeed(DeviceIntPtr dev)
 {
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
     uint32_t vals[2];
 
     vals[0] = (uint32_t)props->scroll_speed_v;
@@ -211,8 +219,11 @@ PropInit_ScrollSpeed(DeviceIntPtr dev, CmtPropertiesPtr props)
 }
 
 static void
-PropInit_ActiveArea(DeviceIntPtr dev, CmtPropertiesPtr props)
+PropInit_ActiveArea(DeviceIntPtr dev)
 {
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
     uint32_t vals[4];
 
     vals[0] = (uint32_t)props->area_left;
