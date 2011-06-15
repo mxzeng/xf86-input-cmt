@@ -18,7 +18,12 @@
 #include "cmt.h"
 #include "cmt-properties.h"
 
+#ifndef XI_PROP_DEVICE_NODE
+#define XI_PROP_DEVICE_NODE "Device Node"
+#endif
+
 /* Property Atoms */
+Atom prop_device;
 Atom prop_tap_to_click;
 Atom prop_motion_speed;
 Atom prop_scroll_speed;
@@ -32,6 +37,7 @@ static Atom PropMake(DeviceIntPtr, char*, Atom, int, int, pointer);
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
 static Atom PropMake_String(DeviceIntPtr, char*, pointer);
 
+static void PropInit_Device(DeviceIntPtr);
 static void PropInit_TapToClick(DeviceIntPtr);
 static void PropInit_MotionSpeed(DeviceIntPtr);
 static void PropInit_ScrollSpeed(DeviceIntPtr);
@@ -92,6 +98,7 @@ PropertyInit(DeviceIntPtr dev)
         return BadAlloc;
 
     /* Create and initialize Device Properties and their Atoms */
+    PropInit_Device(dev);
     PropInit_TapToClick(dev);
     PropInit_MotionSpeed(dev);
     PropInit_ScrollSpeed(dev);
@@ -148,7 +155,8 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
             props->area_top    = ((INT32*)prop->data)[2];
             props->area_bottom = ((INT32*)prop->data)[3];
         }
-    }
+    } else if (atom == prop_device)
+        return BadAccess; /* Read-only properties */
 
     return Success;
 }
@@ -197,6 +205,16 @@ PropMake_String(DeviceIntPtr dev, char* name, pointer str)
 /**
  * Device Property Initializers
  */
+
+static void
+PropInit_Device(DeviceIntPtr dev)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+
+    prop_device = PropMake_String(dev, XI_PROP_DEVICE_NODE, cmt->device);
+}
+
 static void
 PropInit_TapToClick(DeviceIntPtr dev)
 {
