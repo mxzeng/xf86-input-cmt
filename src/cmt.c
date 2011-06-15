@@ -16,6 +16,7 @@
 
 #include <linux/input.h>
 
+#include <exevents.h>
 #include <X11/extensions/XI.h>
 #include <X11/Xatom.h>
 #include <xf86.h>
@@ -29,6 +30,8 @@
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
 
+/* Number of buttons to define on X Input device. */
+#define CMT_NUM_BUTTONS     7
 
 /**
  * Forward declarations
@@ -49,6 +52,8 @@ static Bool DeviceClose(DeviceIntPtr);
 
 static Bool OpenDevice(InputInfoPtr);
 static int IdentifyDevice(InputInfoPtr);
+static int InitializeXDevice(DeviceIntPtr dev);
+
 
 static void ProcessEvent(InputInfoPtr, struct input_event*);
 
@@ -60,6 +65,7 @@ TestBit(int bit, unsigned long* array)
 {
     return array[bit / LONG_BITS] & (1L << (bit % LONG_BITS));
 }
+
 
 /**
  * X Input driver information and PreInit / UnInit routines
@@ -272,8 +278,8 @@ DeviceInit(DeviceIntPtr dev)
 
     xf86IDrvMsg(info, X_INFO, "DeviceInit\n");
 
+    InitializeXDevice(dev);
     dev->public.on = FALSE;
-
     return PropertyInit(dev);
 }
 
@@ -455,6 +461,60 @@ IdentifyDevice(InputInfoPtr info)
 
     return Success;
 }
+
+
+/**
+ * Setup X Input Device Classes
+ */
+
+/*
+ *  Alter the control parameters for the mouse. Note that all special
+ *  protocol values are handled by dix.
+ */
+static void
+PointerCtrl(DeviceIntPtr device, PtrCtrl *ctrl)
+{
+}
+
+
+static int
+InitializeXDevice(DeviceIntPtr dev)
+{
+    unsigned char map[CMT_NUM_BUTTONS + 1];
+    int i;
+    Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
+    Atom axes_labels[2] = { 0 };
+
+    axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
+    axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
+
+    btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
+    btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
+    btn_labels[2] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_RIGHT);
+    btn_labels[3] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_UP);
+    btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
+    btn_labels[5] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_LEFT);
+    btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
+
+    /* TODO: Prop to adjust button mapping */
+    for (i = 0; i <= CMT_NUM_BUTTONS; i++)
+        map[i] = i;
+
+    InitPointerDeviceStruct((DevicePtr)dev, map, CMT_NUM_BUTTONS, btn_labels,
+                            PointerCtrl, GetMotionHistorySize(), 2,
+                            axes_labels);
+
+    /* X Valuator */
+    xf86InitValuatorAxisStruct(dev, 0, axes_labels[0], -1, -1, 1, 0, 1);
+    xf86InitValuatorDefaults(dev, 0);
+
+    /* Y Valuator */
+    xf86InitValuatorAxisStruct(dev, 1, axes_labels[1], -1, -1, 1, 0, 1);
+    xf86InitValuatorDefaults(dev, 1);
+
+    return Success;
+}
+
 
 /**
  * X module information and plug / unplug routines
