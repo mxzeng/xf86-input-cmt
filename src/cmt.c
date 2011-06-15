@@ -10,10 +10,15 @@
 
 #include "cmt.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <X11/extensions/XI.h>
 #include <X11/Xatom.h>
 #include <xf86.h>
 #include <xf86Xinput.h>
+#include <xf86_OSproc.h>
 #include <xorg-server.h>
 #include <xserver-properties.h>
 
@@ -36,6 +41,7 @@ static Bool DeviceOn(DeviceIntPtr);
 static Bool DeviceOff(DeviceIntPtr);
 static Bool DeviceClose(DeviceIntPtr);
 
+static Bool OpenDevice(InputInfoPtr);
 
 /**
  * X Input driver information and PreInit / UnInit routines
@@ -99,6 +105,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 #endif
 {
     CmtDevicePtr cmt;
+    int rc;
 
     xf86IDrvMsg(info, X_INFO, "NewPreInit\n");
 
@@ -112,11 +119,27 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     info->control_proc            = NULL;
     info->switch_mode             = NULL;  /* Only support Absolute mode */
     info->private                 = cmt;
+    info->fd                      = -1;
+
+    rc = OpenDevice(info);
+    if (rc != Success)
+        goto PreInit_error;
 
     ProcessConfOptions(info, info->options);
     xf86ProcessCommonOptions(info, info->options);
 
+    if (info->fd != -1) {
+        close(info->fd);
+        info->fd = -1;
+    }
+
     return Success;
+
+PreInit_error:
+    if (info->fd >= 0)
+        close(info->fd);
+    info->fd = -1;
+    return rc;
 }
 
 static void
@@ -132,6 +155,7 @@ UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     cmt = info->private;
     if (cmt) {
         free(cmt->device);
+        cmt->device = NULL;
         free(cmt);
     }
     info->private = NULL;
@@ -177,7 +201,9 @@ DeviceInit(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
-    xf86IDrvMsg(info, X_INFO, "Init\n");
+    xf86IDrvMsg(info, X_INFO, "DeviceInit\n");
+
+    dev->public.on = FALSE;
 
     return PropertyInit(dev);
 }
@@ -187,9 +213,17 @@ DeviceOn(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
+    int rc;
 
-    xf86IDrvMsg(info, X_INFO, "On\n");
+    xf86IDrvMsg(info, X_INFO, "DeviceOn\n");
 
+    rc = OpenDevice(info);
+    if (rc != Success)
+        return rc;
+
+    xf86FlushInput(info->fd);
+    xf86AddEnabledDevice(info);
+    dev->public.on = TRUE;
     return Success;
 }
 
@@ -199,8 +233,14 @@ DeviceOff(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
-    xf86IDrvMsg(info, X_INFO, "Off\n");
+    xf86IDrvMsg(info, X_INFO, "DeviceOff\n");
 
+    if (info->fd != -1) {
+        xf86RemoveEnabledDevice(info);
+        close(info->fd);
+        info->fd = -1;
+    }
+    dev->public.on = FALSE;
     return Success;
 }
 
@@ -210,11 +250,43 @@ DeviceClose(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
-    xf86IDrvMsg(info, X_INFO, "Close\n");
+    xf86IDrvMsg(info, X_INFO, "DeviceClose\n");
 
+    DeviceOff(dev);
     return Success;
 }
 
+
+/**
+ * Open Device Node
+ */
+static Bool
+OpenDevice(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+
+    if (!cmt->device) {
+        cmt->device = xf86CheckStrOption(info->options, "Device", NULL);
+        if (!cmt->device) {
+            xf86IDrvMsg(info, X_ERROR, "No Device specified.\n");
+            return BadValue;
+        }
+        xf86IDrvMsg(info, X_CONFIG, "Opening Device: \"%s\"\n", cmt->device);
+    }
+
+    if (info->fd < 0) {
+        do {
+            info->fd = open(cmt->device, O_RDWR | O_NONBLOCK, 0);
+        } while (info->fd < 0 && errno == EINTR);
+
+        if (info->fd < 0) {
+            xf86IDrvMsg(info, X_ERROR, "Cannot open \"%s\".\n", cmt->device);
+            return BadValue;
+        }
+    }
+
+    return Success;
+}
 
 /**
  * X module information and plug / unplug routines
