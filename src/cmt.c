@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <linux/input.h>
+
 #include <X11/extensions/XI.h>
 #include <X11/Xatom.h>
 #include <xf86.h>
@@ -23,6 +25,10 @@
 #include <xserver-properties.h>
 
 #include "properties.h"
+
+/* Number of events to attempt to read from kernel on each SIGIO */
+#define NUM_EVENTS          16
+
 
 /**
  * Forward declarations
@@ -43,6 +49,8 @@ static Bool DeviceClose(DeviceIntPtr);
 
 static Bool OpenDevice(InputInfoPtr);
 static int IdentifyDevice(InputInfoPtr);
+
+static void ProcessEvent(InputInfoPtr, struct input_event*);
 
 /**
  * Helper functions
@@ -204,7 +212,52 @@ DeviceControl(DeviceIntPtr dev, int mode)
 static void
 ReadInput(InputInfoPtr info)
 {
-    xf86IDrvMsg(info, X_INFO, "ReadInput\n");
+    struct input_event ev[NUM_EVENTS];
+    int i;
+    int len;
+
+    do {
+        len = read(info->fd, &ev, sizeof(ev));
+        if (len <= 0) {
+            if (errno == ENODEV) { /* May happen after resume */
+                xf86RemoveEnabledDevice(info);
+                close(info->fd);
+                info->fd = -1;
+            } else if (errno != EAGAIN) {
+                /* Use X_NONE to avoid alloc */
+                xf86MsgVerb(X_NONE, 0, "%s: Read error: %s\n", info->name,
+                            strerror(errno));
+            }
+            break;
+        }
+
+        /* kernel always delivers complete events, so len must be sizeof *ev */
+        if (len % sizeof(*ev)) {
+            /* Use X_NONE to avoid alloc */
+            xf86MsgVerb(X_NONE, 0, "%s: Read error: %s\n", info->name,
+                        strerror(errno));
+            break;
+        }
+
+        /* Process events ... */
+        for (i = 0; i < len/sizeof(ev[0]); i++)
+            ProcessEvent(info, &ev[i]);
+
+    } while (len == sizeof(ev));
+    /* Keep reading if kernel supplied NUM_EVENTS events. */
+}
+
+/**
+ * Process Input Events
+ */
+static void
+ProcessEvent(InputInfoPtr info, struct input_event* ev)
+{
+    CmtDevicePtr cmt = info->private;
+
+    xf86IDrvMsg(info, X_INFO, "Event @ %ld.%06ld %u[%u] = %d\n",
+                ev->time.tv_sec, ev->time.tv_usec, ev->type, ev->code,
+                ev->value);
 }
 
 
