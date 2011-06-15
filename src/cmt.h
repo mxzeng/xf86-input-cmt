@@ -7,6 +7,8 @@
 #ifndef _CMT_H_
 #define _CMT_H_
 
+#include <linux/input.h>
+
 #include <xf86.h>
 
 #include "properties.h"
@@ -20,12 +22,26 @@
     xf86Msg((x), "cmt: " __VA_ARGS__)
 #endif
 
+#define LONG_BITS (sizeof(long) * 8)
+
+/* Number of longs needed to hold the given number of bits */
+#define NLONGS(x) (((x) + LONG_BITS - 1) / LONG_BITS)
 
 typedef struct {
     CmtProperties props;
 
     char* device;
     long  handlers;
+
+    /* kernel driver information */
+    struct input_id id;
+    char name[1024];
+    unsigned long bitmask[NLONGS(EV_CNT)];
+    unsigned long key_bitmask[NLONGS(KEY_CNT)];
+    unsigned long rel_bitmask[NLONGS(REL_CNT)];
+    unsigned long abs_bitmask[NLONGS(ABS_CNT)];
+    unsigned long led_bitmask[NLONGS(LED_CNT)];
+    struct input_absinfo absinfo[ABS_CNT];
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif
