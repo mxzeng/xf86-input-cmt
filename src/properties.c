@@ -28,7 +28,9 @@ static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
 static int PropertyDel(DeviceIntPtr, Atom);
 
+static Atom PropMake(DeviceIntPtr, char*, Atom, int, int, pointer);
 static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
+static Atom PropMake_String(DeviceIntPtr, char*, pointer);
 
 static void PropInit_TapToClick(DeviceIntPtr);
 static void PropInit_MotionSpeed(DeviceIntPtr);
@@ -167,16 +169,29 @@ PropertyDel(DeviceIntPtr dev, Atom property)
  * By-Type Device Property Creators
  */
 static Atom
-PropMake_Int(DeviceIntPtr dev, char* name, int size, int len, pointer vals)
+PropMake(DeviceIntPtr dev, char* name, Atom type, int size, int len,
+         pointer vals)
 {
     Atom atom;
 
     atom = MakeAtom(name, strlen(name), TRUE);
-    XIChangeDeviceProperty(dev, atom, XA_INTEGER, size, PropModeReplace, len,
-                           vals, FALSE);
+    XIChangeDeviceProperty(dev, atom, type, size, PropModeReplace, len, vals,
+                           FALSE);
     XISetDevicePropertyDeletable(dev, atom, FALSE);
 
     return atom;
+}
+
+static Atom
+PropMake_Int(DeviceIntPtr dev, char* name, int size, int len, pointer vals)
+{
+    return PropMake(dev, name, XA_INTEGER, size, len, vals);
+}
+
+static Atom
+PropMake_String(DeviceIntPtr dev, char* name, pointer str)
+{
+    return PropMake(dev, name, XA_STRING, 8, strlen(str), str);
 }
 
 /**
