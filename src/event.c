@@ -63,6 +63,18 @@ Event_IdentifyDevice(InputInfoPtr info)
     }
     xf86IDrvMsg(info, X_INFO, "name: %s\n", cmt->name);
 
+    len = ioctl(info->fd, EVIOCGPROP(sizeof(cmt->prop_bitmask)),
+                cmt->prop_bitmask);
+    if (len < 0) {
+        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGPROP failed: %s\n",
+                    strerror(errno));
+        return !Success;
+    }
+    for (i = 0; i < len*8; i++) {
+        if (TestBit(i, cmt->prop_bitmask))
+            xf86IDrvMsg(info, X_INFO, "Has Property %d\n", i);
+    }
+
     len = ioctl(info->fd, EVIOCGBIT(0, sizeof(cmt->bitmask)), cmt->bitmask);
     if (len < 0) {
         xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT failed: %s\n",

@@ -44,6 +44,7 @@ typedef struct {
     unsigned long abs_bitmask[NLONGS(ABS_CNT)];
     unsigned long led_bitmask[NLONGS(LED_CNT)];
     struct input_absinfo absinfo[ABS_CNT];
+    unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif
