@@ -15,6 +15,14 @@
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
 
+static void Event_Syn(InputInfoPtr, struct input_event*);
+static void Event_Syn_Report(InputInfoPtr, struct input_event*);
+static void Event_Syn_MT_Report(InputInfoPtr, struct input_event*);
+
+static void Event_Key(InputInfoPtr, struct input_event*);
+
+static void Event_Abs(InputInfoPtr, struct input_event*);
+
 /**
  * Helper functions
  */
@@ -140,7 +148,65 @@ Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
 void
 Event_Process(InputInfoPtr info, struct input_event* ev)
 {
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld %u[%u] = %d\n",
-                ev->time.tv_sec, ev->time.tv_usec, ev->type, ev->code,
-                ev->value);
+    switch (ev->type) {
+    case EV_SYN:
+        Event_Syn(info, ev);
+        break;
+
+    case EV_KEY:
+        Event_Key(info, ev);
+        break;
+
+    case EV_ABS:
+        Event_Abs(info, ev);
+        break;
+
+    default:
+        xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld %u[%u] = %d\n",
+                    ev->time.tv_sec, ev->time.tv_usec, ev->type, ev->code,
+                    ev->value);
+    }
 }
+
+
+static void
+Event_Syn(InputInfoPtr info, struct input_event* ev)
+{
+    switch (ev->code) {
+    case SYN_REPORT:
+        Event_Syn_Report(info, ev);
+        break;
+    case SYN_MT_REPORT:
+        Event_Syn_MT_Report(info, ev);
+        break;
+    }
+}
+
+static void
+Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
+{
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
+        ev->time.tv_sec, ev->time.tv_usec);
+}
+
+static void
+Event_Syn_MT_Report(InputInfoPtr info, struct input_event* ev)
+{
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ........ MT_SYN_REPORT .......\n",
+        ev->time.tv_sec, ev->time.tv_usec);
+}
+
+static void
+Event_Key(InputInfoPtr info, struct input_event* ev)
+{
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  KEY [%d] = %d\n",
+        ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+}
+
+static void
+Event_Abs(InputInfoPtr info, struct input_event* ev)
+{
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS [%d] = %d\n",
+        ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+}
+
