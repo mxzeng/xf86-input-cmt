@@ -26,6 +26,7 @@
 #include <xserver-properties.h>
 
 #include "properties.h"
+#include "event.h"
 
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
@@ -54,8 +55,6 @@ static Bool OpenDevice(InputInfoPtr);
 static int IdentifyDevice(InputInfoPtr);
 static int InitializeXDevice(DeviceIntPtr dev);
 
-
-static void ProcessEvent(InputInfoPtr, struct input_event*);
 
 /**
  * Helper functions
@@ -247,25 +246,11 @@ ReadInput(InputInfoPtr info)
 
         /* Process events ... */
         for (i = 0; i < len/sizeof(ev[0]); i++)
-            ProcessEvent(info, &ev[i]);
+            Event_Process(info, &ev[i]);
 
     } while (len == sizeof(ev));
     /* Keep reading if kernel supplied NUM_EVENTS events. */
 }
-
-/**
- * Process Input Events
- */
-static void
-ProcessEvent(InputInfoPtr info, struct input_event* ev)
-{
-    CmtDevicePtr cmt = info->private;
-
-    xf86IDrvMsg(info, X_INFO, "Event @ %ld.%06ld %u[%u] = %d\n",
-                ev->time.tv_sec, ev->time.tv_usec, ev->type, ev->code,
-                ev->value);
-}
-
 
 /**
  * device control event handlers
