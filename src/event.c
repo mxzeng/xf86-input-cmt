@@ -12,6 +12,8 @@
 #include <xf86Xinput.h>
 
 #include "cmt.h"
+#include "mt.h"
+
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
 
@@ -22,6 +24,9 @@ static void Event_Syn_MT_Report(InputInfoPtr, struct input_event*);
 static void Event_Key(InputInfoPtr, struct input_event*);
 
 static void Event_Abs(InputInfoPtr, struct input_event*);
+static void Event_Abs_MT_Slot(InputInfoPtr, struct input_event*);
+static void Event_Abs_MT(InputInfoPtr, struct input_event*);
+
 
 /**
  * Helper functions
@@ -105,6 +110,13 @@ Event_IdentifyDevice(InputInfoPtr info)
             xf86IDrvMsg(info, X_INFO, "Has REL %d\n", i);
     }
 
+    /*
+     * TODO(djkurtz): Solve the race condition between MT slot initialization
+     *    from absinfo, and incoming/lost input events.
+     *    Specifically, if kernel driver sends MT_SLOT event between absinfo
+     *    probe and when we start listening for input events.
+     */
+
     len = ioctl(info->fd, EVIOCGBIT(EV_ABS, sizeof(cmt->abs_bitmask)),
                 cmt->abs_bitmask);
     if (len < 0) {
@@ -123,9 +135,25 @@ Event_IdentifyDevice(InputInfoPtr info)
                             i, strerror(errno));
                 return !Success;
             }
+
             Absinfo_Print(info, absinfo);
+
+            if (i == ABS_MT_SLOT) {
+                int rc;
+                rc = MTB_Init(info, absinfo->minimum, absinfo->maximum,
+                              absinfo->value);
+                if (rc != Success)
+                    return rc;
+            } else if (IS_ABS_MT(i)) {
+                cmt->mt.axes[MT_CODE(i)] = absinfo;
+            }
         }
     }
+
+    /*
+     * TODO(djkurtz): probe driver for current MT slot states when supported
+     * by kernel input subsystem.
+     */
 
     return Success;
 }
@@ -185,6 +213,7 @@ Event_Syn(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
 {
+    MT_Print_Slots(info);
     xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
         ev->time.tv_sec, ev->time.tv_usec);
 }
@@ -206,7 +235,55 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Abs(InputInfoPtr info, struct input_event* ev)
 {
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS [%d] = %d\n",
+    if (ev->code == ABS_MT_SLOT) {
+        Event_Abs_MT_Slot(info, ev);
+    } else if (IS_ABS_MT(ev->code)) {
+        Event_Abs_MT(info, ev);
+    } else {
+        xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS [%d] = %d\n",
+            ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+    }
+}
+
+static void
+Event_Abs_MT_Slot(InputInfoPtr info, struct input_event* ev)
+{
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
+        ev->time.tv_sec, ev->time.tv_usec, ev->value);
+
+    MT_Slot_Set(info, ev->value);
+}
+
+static void
+Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* axis = cmt->mt.axes[MT_CODE(ev->code)];
+    MtSlotPtr slot = cmt->mt.slot_current;
+
+    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS_MT[%02x] = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+
+    if (axis == NULL) {
+        xf86IDrvMsg(info, X_ERROR,
+            "ABS_MT[%02x] was not reported by this device\n", ev->code);
+        return;
+    }
+
+    /* Warn about out of range data, but don't ignore */
+    if ((ev->code != ABS_MT_TRACKING_ID)
+                    && ((ev->value < axis->minimum)
+                        || (ev->value > axis->maximum))) {
+        xf86IDrvMsg(info, X_INFO,
+            "ABS_MT[%02x] = %d : value out of range [%d .. %d]\n",
+            ev->code, ev->value, axis->minimum, axis->maximum);
+    }
+
+    if (slot == NULL) {
+        xf86IDrvMsg(info, X_ERROR, "MT slot not set. Ignoring ABS_MT event\n");
+        return;
+    }
+
+    MT_Slot_Value_Set(slot, ev->code, ev->value);
 }
 
