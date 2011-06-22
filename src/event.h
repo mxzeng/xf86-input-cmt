@@ -13,6 +13,7 @@
 #include <xf86Xinput.h>
 
 
+int Event_IdentifyDevice(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
 
 #endif
