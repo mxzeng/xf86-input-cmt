@@ -274,7 +274,6 @@ static Bool
 DeviceInit(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
 
     xf86IDrvMsg(info, X_INFO, "DeviceInit\n");
 
@@ -287,7 +286,6 @@ static Bool
 DeviceOn(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
     int rc;
 
     xf86IDrvMsg(info, X_INFO, "DeviceOn\n");
@@ -306,7 +304,6 @@ static Bool
 DeviceOff(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
 
     xf86IDrvMsg(info, X_INFO, "DeviceOff\n");
 
@@ -323,7 +320,6 @@ static Bool
 DeviceClose(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
 
     xf86IDrvMsg(info, X_INFO, "DeviceClose\n");
 
