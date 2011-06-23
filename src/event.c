@@ -42,7 +42,7 @@ TestBit(int bit, unsigned long* array)
  * Probe Device Input Event Support
  */
 int
-Event_IdentifyDevice(InputInfoPtr info)
+Event_Init(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
@@ -182,6 +182,11 @@ Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
         xf86IDrvMsg(info, X_INFO, "    res = %d\n", absinfo->resolution);
 }
 
+void
+Event_Free(InputInfoPtr info)
+{
+    MT_Free(info);
+}
 
 /**
  * Process Input Events

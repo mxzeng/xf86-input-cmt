@@ -134,6 +134,16 @@ MTB_Init(InputInfoPtr info, int min, int max, int current)
 }
 
 void
+MT_Free(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+
+    free(evstate->slots);
+    evstate->slots = NULL;
+}
+
+void
 MT_Slot_Set(InputInfoPtr info, int value)
 {
     CmtDevicePtr cmt = info->private;

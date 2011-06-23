@@ -136,10 +136,9 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 
     ProcessConfOptions(info, info->options);
 
-    if (Event_IdentifyDevice(info) != Success) {
-        rc = BadMatch;
+    rc = Event_Init(info);
+    if (rc != Success)
         goto PreInit_error;
-    }
 
     xf86ProcessCommonOptions(info, info->options);
 
@@ -154,6 +153,7 @@ PreInit_error:
     if (info->fd >= 0)
         close(info->fd);
     info->fd = -1;
+    Event_Free(info);
     return rc;
 }
 
@@ -171,9 +171,10 @@ UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (cmt) {
         free(cmt->device);
         cmt->device = NULL;
+        Event_Free(info);
         free(cmt);
+        info->private = NULL;
     }
-    info->private = NULL;
     xf86DeleteInput(info, flags);
 }
 

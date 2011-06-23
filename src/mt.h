@@ -40,6 +40,7 @@ typedef struct {
 } MtSlotRec, *MtSlotPtr;
 
 int MTB_Init(InputInfoPtr, int, int, int);
+void MT_Free(InputInfoPtr);
 
 void MT_Print_Slots(InputInfoPtr);
 void MT_Slot_Set(InputInfoPtr, int);

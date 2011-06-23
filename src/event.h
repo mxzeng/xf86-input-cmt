@@ -23,7 +23,8 @@ typedef struct {
     struct input_absinfo* mt_axes[_ABS_MT_CNT];
 } EventStateRec, *EventStatePtr;
 
-int Event_IdentifyDevice(InputInfoPtr);
+int Event_Init(InputInfoPtr);
+void Event_Free(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
 
 #endif
