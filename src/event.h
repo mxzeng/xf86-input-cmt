@@ -14,6 +14,10 @@
 
 #include "mt.h"
 
+#define BUTTON_LEFT                 0x01
+#define BUTTON_RIGHT                0x02
+#define BUTTON_MIDDLE               0x04
+
 typedef struct {
     int slot_min;
     int slot_max;
@@ -21,6 +25,8 @@ typedef struct {
     MtSlotPtr slot_current;
 
     struct input_absinfo* mt_axes[_ABS_MT_CNT];
+
+    unsigned buttons;
 } EventStateRec, *EventStatePtr;
 
 int Event_Init(InputInfoPtr);

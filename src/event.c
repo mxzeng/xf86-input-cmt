@@ -246,8 +246,24 @@ Event_Syn_MT_Report(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Key(InputInfoPtr info, struct input_event* ev)
 {
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+    unsigned value = ev->value;
+
     xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  KEY [%d] = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+
+    switch (ev->code) {
+    case BTN_LEFT:
+        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_LEFT, value);
+        break;
+    case BTN_RIGHT:
+        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_RIGHT, value);
+        break;
+    case BTN_MIDDLE:
+        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_MIDDLE, value);
+        break;
+    }
 }
 
 static void
