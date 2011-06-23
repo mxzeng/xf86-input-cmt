@@ -113,20 +113,20 @@ int
 MTB_Init(InputInfoPtr info, int min, int max, int current)
 {
     CmtDevicePtr cmt = info->private;
-    MtStatePtr mt = &cmt->mt;
+    EventStatePtr evstate = &cmt->evstate;
     int num_slots;
     int i;
 
-    mt->slot_min = min;
-    mt->slot_max = max;
+    evstate->slot_min = min;
+    evstate->slot_max = max;
 
     num_slots = max - min + 1;
-    mt->slots = calloc(sizeof(MtSlotRec), num_slots);
-    if (mt->slots == NULL)
+    evstate->slots = calloc(sizeof(MtSlotRec), num_slots);
+    if (evstate->slots == NULL)
         return BadAlloc;
 
     for (i=0; i < num_slots; i++)
-        mt->slots[i].tracking_id = -1;
+        evstate->slots[i].tracking_id = -1;
 
     MT_Slot_Set(info, current);
 
@@ -137,16 +137,16 @@ void
 MT_Slot_Set(InputInfoPtr info, int value)
 {
     CmtDevicePtr cmt = info->private;
-    MtStatePtr mt = &cmt->mt;
+    EventStatePtr evstate = &cmt->evstate;
 
-    if (value < mt->slot_min || value > mt->slot_max) {
-        mt->slot_current = NULL;
+    if (value < evstate->slot_min || value > evstate->slot_max) {
+        evstate->slot_current = NULL;
         xf86IDrvMsg(info, X_ERROR, "MT Slot %d is out of range [%d .. %d].\n",
-                    value, mt->slot_min, mt->slot_max);
+                    value, evstate->slot_min, evstate->slot_max);
         return;
     }
 
-    mt->slot_current = &mt->slots[value - mt->slot_min];
+    evstate->slot_current = &evstate->slots[value - evstate->slot_min];
 }
 
 
@@ -154,14 +154,14 @@ static void
 MT_Slot_Print(InputInfoPtr info, MtSlotPtr slot)
 {
     CmtDevicePtr cmt = info->private;
-    MtStatePtr mt = &cmt->mt;
+    EventStatePtr evstate = &cmt->evstate;
     int i;
 
     if (slot == NULL)
         return;
 
     for (i = _ABS_MT_FIRST; i <= _ABS_MT_LAST; i++) {
-        if (mt->axes[MT_CODE(i)] == NULL)
+        if (evstate->mt_axes[MT_CODE(i)] == NULL)
             continue;
 
         xf86IDrvMsg(info, X_INFO, "  %s = %d\n",
@@ -173,11 +173,11 @@ void
 MT_Print_Slots(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
-    MtStatePtr mt = &cmt->mt;
+    EventStatePtr evstate = &cmt->evstate;
     int i;
 
-    for (i = mt->slot_min; i <= mt->slot_max; i++) {
-        MtSlotPtr slot = &mt->slots[i - mt->slot_min];
+    for (i = evstate->slot_min; i <= evstate->slot_max; i++) {
+        MtSlotPtr slot = &evstate->slots[i - evstate->slot_min];
         if (slot->tracking_id == -1)
             continue;
         xf86IDrvMsg(info, X_INFO, "Slot %d:\n", i);

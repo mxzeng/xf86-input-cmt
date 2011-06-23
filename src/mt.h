@@ -39,16 +39,6 @@ typedef struct {
     int distance;           /* Contact hover distance */
 } MtSlotRec, *MtSlotPtr;
 
-typedef struct {
-    int slot_min;
-    int slot_max;
-    MtSlotPtr slots;
-    MtSlotPtr slot_current;
-
-    struct input_absinfo* axes[_ABS_MT_CNT];
-} MtStateRec, *MtStatePtr;
-
-
 int MTB_Init(InputInfoPtr, int, int, int);
 
 void MT_Print_Slots(InputInfoPtr);

@@ -11,7 +11,7 @@
 
 #include <xf86.h>
 
-#include "mt.h"
+#include "event.h"
 #include "properties.h"
 
 /*
@@ -30,7 +30,7 @@
 
 typedef struct {
     CmtProperties props;
-    MtStateRec mt;
+    EventStateRec evstate;
 
     char* device;
     long  handlers;

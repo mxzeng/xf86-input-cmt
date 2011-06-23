@@ -45,6 +45,7 @@ int
 Event_IdentifyDevice(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
     int i;
     int len;
 
@@ -157,7 +158,7 @@ Event_IdentifyDevice(InputInfoPtr info)
                 if (rc != Success)
                     return rc;
             } else if (IS_ABS_MT(i)) {
-                cmt->mt.axes[MT_CODE(i)] = absinfo;
+                evstate->mt_axes[MT_CODE(i)] = absinfo;
             }
         }
     }
@@ -270,8 +271,9 @@ static void
 Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
 {
     CmtDevicePtr cmt = info->private;
-    struct input_absinfo* axis = cmt->mt.axes[MT_CODE(ev->code)];
-    MtSlotPtr slot = cmt->mt.slot_current;
+    EventStatePtr evstate = &cmt->evstate;
+    struct input_absinfo* axis = evstate->mt_axes[MT_CODE(ev->code)];
+    MtSlotPtr slot = evstate->slot_current;
 
     xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS_MT[%02x] = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);

@@ -12,6 +12,16 @@
 
 #include <xf86Xinput.h>
 
+#include "mt.h"
+
+typedef struct {
+    int slot_min;
+    int slot_max;
+    MtSlotPtr slots;
+    MtSlotPtr slot_current;
+
+    struct input_absinfo* mt_axes[_ABS_MT_CNT];
+} EventStateRec, *EventStatePtr;
 
 int Event_IdentifyDevice(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
