@@ -23,8 +23,8 @@
 #include <xorg-server.h>
 #include <xserver-properties.h>
 
-#include "properties.h"
 #include "event.h"
+#include "properties.h"
 
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
