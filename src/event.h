@@ -27,4 +27,29 @@ int Event_Init(InputInfoPtr);
 void Event_Free(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
 
+/* Some useful bit twiddling routines */
+static inline unsigned
+Bit_Set(unsigned start, unsigned mask)
+{
+    return start | mask;
+}
+
+static inline unsigned
+Bit_Clr(unsigned start, unsigned mask)
+{
+    return start & ~mask;
+}
+
+static inline unsigned
+Bit_Flip(unsigned start, unsigned mask)
+{
+    return start ^ mask;
+}
+
+static inline unsigned
+Bit_Assign(unsigned start, unsigned mask, unsigned val)
+{
+    return val ? (start | mask) : (start & ~mask);
+}
+
 #endif
