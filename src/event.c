@@ -308,6 +308,10 @@ Event_Syn(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
 {
+    CmtDevicePtr cmt = info->private;
+    GesturePtr gesture = &cmt->gesture;
+    EventStatePtr evstate = &cmt->evstate;
+    Gesture_Process_Slots(gesture, evstate, &ev->time);
     MT_Print_Slots(info);
     xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
         ev->time.tv_sec, ev->time.tv_usec);

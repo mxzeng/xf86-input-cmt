@@ -12,6 +12,7 @@
 #include <xf86.h>
 
 #include "event.h"
+#include "gesture.h"
 #include "properties.h"
 
 /*
@@ -31,6 +32,7 @@
 typedef struct {
     CmtProperties props;
     EventStateRec evstate;
+    GestureRec gesture;
 
     char* device;
     long  handlers;

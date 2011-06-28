@@ -148,9 +148,14 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
         info->fd = -1;
     }
 
+    rc = Gesture_Init(&cmt->gesture, info);
+    if (rc != Success)
+        goto PreInit_error;
+
     return Success;
 
 PreInit_error:
+    Gesture_Free(&cmt->gesture);
     if (info->fd >= 0)
         close(info->fd);
     info->fd = -1;
@@ -170,6 +175,7 @@ UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 
     cmt = info->private;
     if (cmt) {
+        Gesture_Free(&cmt->gesture);
         free(cmt->device);
         cmt->device = NULL;
         Event_Free(info);
@@ -259,6 +265,7 @@ static Bool
 DeviceOn(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
     int rc;
 
     xf86IDrvMsg(info, X_INFO, "DeviceOn\n");
@@ -270,6 +277,7 @@ DeviceOn(DeviceIntPtr dev)
     xf86FlushInput(info->fd);
     xf86AddEnabledDevice(info);
     dev->public.on = TRUE;
+    Gesture_Device_On(&cmt->gesture, dev);
     return Success;
 }
 
@@ -277,8 +285,10 @@ static Bool
 DeviceOff(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
 
     xf86IDrvMsg(info, X_INFO, "DeviceOff\n");
+    Gesture_Device_Off(&cmt->gesture);
 
     if (info->fd != -1) {
         xf86RemoveEnabledDevice(info);
