@@ -33,6 +33,7 @@ Atom prop_tap_to_click;
 Atom prop_motion_speed;
 Atom prop_scroll_speed;
 Atom prop_active_area;
+Atom prop_active_res;
 
 static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
@@ -48,6 +49,7 @@ static void PropInit_TapToClick(DeviceIntPtr);
 static void PropInit_MotionSpeed(DeviceIntPtr);
 static void PropInit_ScrollSpeed(DeviceIntPtr);
 static void PropInit_ActiveArea(DeviceIntPtr);
+static void PropInit_Resolution(DeviceIntPtr);
 
 
 /**
@@ -87,6 +89,16 @@ ProcessConfOptions(InputInfoPtr info, pointer opts)
 
     props->area_bottom = xf86SetIntOption(opts, CMT_CONF_AREA_BOTTOM,
                                           Event_Get_Bottom(info));
+
+    /*
+     * Initialize useable trackpad area. If not user configured,
+     * use x/y valuator min/max as reported by kernel driver.
+     */
+    props->res_y = xf86SetIntOption(opts, CMT_CONF_RES_Y,
+                                         Event_Get_Res_Y(info));
+
+    props->res_x = xf86SetIntOption(opts, CMT_CONF_RES_X,
+                                        Event_Get_Res_X(info));
 }
 
 /**
@@ -110,6 +122,7 @@ PropertyInit(DeviceIntPtr dev)
     PropInit_MotionSpeed(dev);
     PropInit_ScrollSpeed(dev);
     PropInit_ActiveArea(dev);
+    PropInit_Resolution(dev);
 
     return Success;
 }
@@ -161,6 +174,15 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
             props->area_right  = ((INT32*)prop->data)[1];
             props->area_top    = ((INT32*)prop->data)[2];
             props->area_bottom = ((INT32*)prop->data)[3];
+        }
+
+    } else if (atom == prop_active_res) {
+        if (prop->type != XA_INTEGER || prop->format != 32 || prop->size != 2)
+            return BadMatch;
+
+        if (!checkonly) {
+            props->res_y = ((INT32*)prop->data)[0];
+            props->res_x = ((INT32*)prop->data)[1];
         }
     } else if (atom == prop_device || atom == prop_product_id)
         return BadAccess; /* Read-only properties */
@@ -284,4 +306,17 @@ PropInit_ActiveArea(DeviceIntPtr dev)
     vals[2] = (uint32_t)props->area_top;
     vals[3] = (uint32_t)props->area_bottom;
     prop_active_area = PropMake_Int(dev, CMT_PROP_AREA, 32, 4, vals);
+}
+
+static void
+PropInit_Resolution(DeviceIntPtr dev)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
+    uint32_t vals[2];
+
+    vals[0] = (uint32_t)props->res_y;
+    vals[1] = (uint32_t)props->res_x;
+    prop_active_res = PropMake_Int(dev, CMT_PROP_RES, 32, 2, vals);
 }

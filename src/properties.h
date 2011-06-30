@@ -38,6 +38,10 @@
 
 #define CMT_CONF_AREA_BOTTOM "Bottom"
 
+#define CMT_CONF_RES_Y       "Vertical Resolution"
+
+#define CMT_CONF_RES_X       "Horizontal Resolution"
+
 
 typedef struct {
     Bool tap_to_click;
@@ -48,6 +52,8 @@ typedef struct {
     int  area_right;
     int  area_top;
     int  area_bottom;
+    int  res_y;
+    int  res_x;
 } CmtProperties, *CmtPropertiesPtr;
 
 int PropertyInit(DeviceIntPtr);
