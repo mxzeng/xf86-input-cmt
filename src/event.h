@@ -33,6 +33,11 @@ int Event_Init(InputInfoPtr);
 void Event_Free(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
 
+int Event_Get_Left(InputInfoPtr);
+int Event_Get_Right(InputInfoPtr);
+int Event_Get_Top(InputInfoPtr);
+int Event_Get_Bottom(InputInfoPtr);
+
 /* Some useful bit twiddling routines */
 static inline unsigned
 Bit_Set(unsigned start, unsigned mask)

@@ -38,6 +38,40 @@ TestBit(int bit, unsigned long* array)
     return array[bit / LONG_BITS] & (1L << (bit % LONG_BITS));
 }
 
+/**
+ * Input Device Event Property accessors
+ */
+int
+Event_Get_Left(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    return absinfo->minimum;
+}
+
+int
+Event_Get_Right(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    return absinfo->maximum;
+}
+
+int
+Event_Get_Top(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    return absinfo->minimum;
+}
+
+int
+Event_Get_Bottom(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    return absinfo->maximum;
+}
 
 /**
  * Probe Device Input Event Support
