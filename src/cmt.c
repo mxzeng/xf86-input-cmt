@@ -134,11 +134,12 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (rc != Success)
         goto PreInit_error;
 
-    ProcessConfOptions(info, info->options);
-
     rc = Event_Init(info);
     if (rc != Success)
         goto PreInit_error;
+
+    /* Process Configuration Options after probing kernel device */
+    ProcessConfOptions(info, info->options);
 
     xf86ProcessCommonOptions(info, info->options);
 

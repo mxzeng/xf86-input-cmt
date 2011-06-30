@@ -73,20 +73,20 @@ ProcessConfOptions(InputInfoPtr info, pointer opts)
                                              CMT_DEF_SCROLL_SPEED_H);
 
     /*
-     * TODO(djkurtz): initialize based on x/y valuator min/max,
-     * as reported by kernel driver.
+     * Initialize useable trackpad area. If not user configured,
+     * use x/y valuator min/max as reported by kernel driver.
      */
     props->area_left = xf86SetIntOption(opts, CMT_CONF_AREA_LEFT,
-                                        CMT_DEF_AREA_LEFT);
+                                        Event_Get_Left(info));
 
     props->area_right = xf86SetIntOption(opts, CMT_CONF_AREA_RIGHT,
-                                         CMT_DEF_AREA_RIGHT);
+                                         Event_Get_Right(info));
 
     props->area_top = xf86SetIntOption(opts, CMT_CONF_AREA_TOP,
-                                       CMT_DEF_AREA_TOP);
+                                       Event_Get_Top(info));
 
     props->area_bottom = xf86SetIntOption(opts, CMT_CONF_AREA_BOTTOM,
-                                          CMT_DEF_AREA_BOTTOM);
+                                          Event_Get_Bottom(info));
 }
 
 /**

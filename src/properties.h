@@ -31,16 +31,12 @@
 #define CMT_DEF_SCROLL_SPEED_H  100
 
 #define CMT_CONF_AREA_LEFT   "Left"
-#define CMT_DEF_AREA_LEFT     0
 
 #define CMT_CONF_AREA_RIGHT  "Right"
-#define CMT_DEF_AREA_RIGHT    1024
 
 #define CMT_CONF_AREA_TOP    "Top"
-#define CMT_DEF_AREA_TOP      0
 
 #define CMT_CONF_AREA_BOTTOM "Bottom"
-#define CMT_DEF_AREA_BOTTOM   512
 
 
 typedef struct {
