@@ -14,6 +14,7 @@
 #include "cmt.h"
 #include "mt.h"
 
+static inline Bool TestBit(int, unsigned long*);
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
 
