@@ -73,6 +73,23 @@ Event_Get_Bottom(InputInfoPtr info)
     return absinfo->maximum;
 }
 
+int
+Event_Get_Res_Y(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    return absinfo->resolution;
+}
+
+int
+Event_Get_Res_X(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    return absinfo->resolution;
+}
+
+
 /**
  * Probe Device Input Event Support
  */
