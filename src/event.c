@@ -96,6 +96,13 @@ Event_Get_Button_Pad(InputInfoPtr info)
     return TestBit(INPUT_PROP_BUTTONPAD, cmt->prop_bitmask);
 }
 
+int
+Event_Get_Semi_MT(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(INPUT_PROP_SEMI_MT, cmt->prop_bitmask);
+}
+
 
 /**
  * Probe Device Input Event Support
