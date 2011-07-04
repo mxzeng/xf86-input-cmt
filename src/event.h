@@ -39,6 +39,7 @@ int Event_Get_Top(InputInfoPtr);
 int Event_Get_Bottom(InputInfoPtr);
 int Event_Get_Res_Y(InputInfoPtr);
 int Event_Get_Res_X(InputInfoPtr);
+int Event_Get_Button_Pad(InputInfoPtr);
 
 /* Some useful bit twiddling routines */
 static inline unsigned

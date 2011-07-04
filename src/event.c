@@ -89,6 +89,13 @@ Event_Get_Res_X(InputInfoPtr info)
     return absinfo->resolution;
 }
 
+int
+Event_Get_Button_Pad(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(INPUT_PROP_BUTTONPAD, cmt->prop_bitmask);
+}
+
 
 /**
  * Probe Device Input Event Support
