@@ -41,6 +41,7 @@ int Event_Get_Res_Y(InputInfoPtr);
 int Event_Get_Res_X(InputInfoPtr);
 int Event_Get_Button_Pad(InputInfoPtr);
 int Event_Get_Semi_MT(InputInfoPtr);
+int Event_Get_T5R2(InputInfoPtr);
 
 /* Some useful bit twiddling routines */
 static inline unsigned

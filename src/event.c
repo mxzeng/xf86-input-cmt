@@ -14,6 +14,10 @@
 #include "cmt.h"
 #include "mt.h"
 
+#ifndef INPUT_PROP_SYNAPTICS_T5R2
+#define INPUT_PROP_SYNAPTICS_T5R2   0x04    /* synaptics track 5 report 2 */
+#endif
+
 static inline Bool TestBit(int, unsigned long*);
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
@@ -101,6 +105,13 @@ Event_Get_Semi_MT(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
     return TestBit(INPUT_PROP_SEMI_MT, cmt->prop_bitmask);
+}
+
+int
+Event_Get_T5R2(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(INPUT_PROP_SYNAPTICS_T5R2, cmt->prop_bitmask);
 }
 
 
