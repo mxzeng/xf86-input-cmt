@@ -79,8 +79,6 @@ PreInit(InputDriverPtr drv, IDevPtr idev, int flags)
 {
     InputInfoPtr info;
 
-    xf86IDrvMsg(info, X_INFO, "PreInit\n");
-
     /* Allocate a new InputInfoRec and add it to the head xf86InputDevs. */
     info = xf86AllocateInput(drv, 0);
     if (!info) {
@@ -95,6 +93,8 @@ PreInit(InputDriverPtr drv, IDevPtr idev, int flags)
     info->flags                   = XI86_SEND_DRAG_EVENTS;
     info->conf_idev               = idev;
     info->always_core_feedback    = 0;
+
+    xf86IDrvMsg(info, X_INFO, "PreInit\n");
 
     xf86CollectInputOptions(info, NULL, NULL);
 
