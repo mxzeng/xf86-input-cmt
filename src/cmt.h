@@ -29,6 +29,21 @@
         ##__VA_ARGS__)
 #endif
 
+/* Message Log Verbosity for debug messages */
+#define DBG_VERB    7
+
+#define DBG(info, format, ...) \
+    xf86IDrvMsgVerb((info), X_INFO, DBG_VERB, "%s:%d: " format, \
+        __FILE__, __LINE__, ##__VA_ARGS__)
+
+#define PROBE_DBG(info, format, ...) \
+    xf86IDrvMsgVerb((info), X_PROBED, DBG_VERB, "%s:%d: " format, \
+        __FILE__, __LINE__, ##__VA_ARGS__)
+
+#define CONFIG_DBG(info, format, ...) \
+    xf86IDrvMsgVerb((info), X_CONFIG, DBG_VERB, "%s:%d: " format, \
+        __FILE__, __LINE__, ##__VA_ARGS__)
+
 #define LONG_BITS (sizeof(long) * 8)
 
 /* Number of longs needed to hold the given number of bits */
