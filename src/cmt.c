@@ -424,7 +424,6 @@ _X_EXPORT XF86ModuleData cmtModuleData =
 static pointer
 Plug(pointer module, pointer options, int* errmaj, int* errmin)
 {
-    xf86IDrvMsg(info, X_INFO, "Plug\n");
     xf86AddInputDriver(&CMT, module, 0);
     return module;
 }
@@ -432,5 +431,4 @@ Plug(pointer module, pointer options, int* errmaj, int* errmin)
 static void
 Unplug(pointer p)
 {
-    xf86IDrvMsg(info, X_INFO, "Unplug\n");
 }
