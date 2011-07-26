@@ -20,8 +20,13 @@
  * Until then, manually prepend our module name to the format string.
  */
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-#define xf86IDrvMsg(info, x, ...) \
-    xf86Msg((x), "cmt: " __VA_ARGS__)
+#define xf86IDrvMsgVerb(info, type, verb, format, ...) \
+    xf86MsgVerb((type), (verb), "%s: %s: " format, info->drv->driverName, \
+        info->name, ##__VA_ARGS__)
+
+#define xf86IDrvMsg(info, type, format, ...) \
+    xf86Msg((type), "%s: %s: " format, info->drv->driverName, info->name, \
+        ##__VA_ARGS__)
 #endif
 
 #define LONG_BITS (sizeof(long) * 8)
