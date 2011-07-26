@@ -94,7 +94,7 @@ PreInit(InputDriverPtr drv, IDevPtr idev, int flags)
     info->conf_idev               = idev;
     info->always_core_feedback    = 0;
 
-    xf86IDrvMsg(info, X_INFO, "PreInit\n");
+    DBG(info, "PreInit\n");
 
     xf86CollectInputOptions(info, NULL, NULL);
 
@@ -116,7 +116,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     CmtDevicePtr cmt;
     int rc;
 
-    xf86IDrvMsg(info, X_INFO, "NewPreInit\n");
+    DBG(info, "NewPreInit\n");
 
     cmt = calloc(1, sizeof(*cmt));
     if (!cmt)
@@ -171,7 +171,7 @@ UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (!info)
         return;
 
-    xf86IDrvMsg(info, X_INFO, "UnInit\n");
+    DBG(info, "UnInit\n");
 
     cmt = info->private;
     if (cmt) {
@@ -254,7 +254,7 @@ DeviceInit(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
 
-    xf86IDrvMsg(info, X_INFO, "DeviceInit\n");
+    DBG(info, "DeviceInit\n");
 
     InitializeXDevice(dev);
     dev->public.on = FALSE;
@@ -268,7 +268,7 @@ DeviceOn(DeviceIntPtr dev)
     CmtDevicePtr cmt = info->private;
     int rc;
 
-    xf86IDrvMsg(info, X_INFO, "DeviceOn\n");
+    DBG(info, "DeviceOn\n");
 
     rc = OpenDevice(info);
     if (rc != Success)
@@ -287,7 +287,8 @@ DeviceOff(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
-    xf86IDrvMsg(info, X_INFO, "DeviceOff\n");
+    DBG(info, "DeviceOff\n");
+
     Gesture_Device_Off(&cmt->gesture);
 
     if (info->fd != -1) {
@@ -304,7 +305,7 @@ DeviceClose(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
 
-    xf86IDrvMsg(info, X_INFO, "DeviceClose\n");
+    DBG(info, "DeviceClose\n");
 
     DeviceOff(dev);
     return Success;

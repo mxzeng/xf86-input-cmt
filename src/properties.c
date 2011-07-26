@@ -139,8 +139,7 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
     CmtPropertiesPtr props = &cmt->props;
 
     if (!checkonly)
-        xf86IDrvMsg(info, X_INFO, "PropertySet: %s (%d)\n", NameForAtom(atom),
-                    (int)atom);
+        DBG(info, "PropertySet: %s (%d)\n", NameForAtom(atom), (int)atom);
 
     if (atom == prop_tap_to_click) {
         if (prop->type != XA_INTEGER || prop->format != 8 || prop->size != 1)

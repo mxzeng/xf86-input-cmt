@@ -174,8 +174,8 @@ MT_Slot_Print(InputInfoPtr info, MtSlotPtr slot)
         if (evstate->mt_axes[MT_CODE(i)] == NULL)
             continue;
 
-        xf86IDrvMsg(info, X_INFO, "  %s = %d\n",
-            mt_axis_names[MT_CODE(i)], MT_Slot_Value_Get(slot, i));
+        DBG(info, "  %s = %d\n", mt_axis_names[MT_CODE(i)],
+            MT_Slot_Value_Get(slot, i));
     }
 }
 
@@ -190,7 +190,7 @@ MT_Print_Slots(InputInfoPtr info)
         MtSlotPtr slot = &evstate->slots[i - evstate->slot_min];
         if (slot->tracking_id == -1)
             continue;
-        xf86IDrvMsg(info, X_INFO, "Slot %d:\n", i);
+        DBG(info, "Slot %d:\n", i);
         MT_Slot_Print(info, slot);
     }
 }

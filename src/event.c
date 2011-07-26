@@ -150,7 +150,7 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->prop_bitmask))
-            xf86IDrvMsg(info, X_INFO, "Has Property %d\n", i);
+            PROBE_DBG(info, "Has Property %d\n", i);
     }
 
     len = ioctl(info->fd, EVIOCGBIT(0, sizeof(cmt->bitmask)), cmt->bitmask);
@@ -161,7 +161,7 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->bitmask))
-            xf86IDrvMsg(info, X_INFO, "Has Event %d\n", i);
+            PROBE_DBG(info, "Has Event %d\n", i);
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_KEY, sizeof(cmt->key_bitmask)),
@@ -173,7 +173,7 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->key_bitmask))
-            xf86IDrvMsg(info, X_INFO, "Has KEY %d\n", i);
+            PROBE_DBG(info, "Has KEY %d\n", i);
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_LED, sizeof(cmt->led_bitmask)),
@@ -185,7 +185,7 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->led_bitmask))
-            xf86IDrvMsg(info, X_INFO, "Has LED %d\n", i);
+            PROBE_DBG(info, "Has LED %d\n", i);
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_REL, sizeof(cmt->rel_bitmask)),
@@ -197,7 +197,7 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->rel_bitmask))
-            xf86IDrvMsg(info, X_INFO, "Has REL %d\n", i);
+            PROBE_DBG(info, "Has REL %d\n", i);
     }
 
     /*
@@ -218,7 +218,7 @@ Event_Init(InputInfoPtr info)
     for (i = ABS_X; i <= ABS_MAX; i++) {
         if (TestBit(i, cmt->abs_bitmask)) {
             struct input_absinfo* absinfo = &cmt->absinfo[i];
-            xf86IDrvMsg(info, X_INFO, "Has ABS axis %d\n", i);
+            PROBE_DBG(info, "Has ABS axis %d\n", i);
             len = ioctl(info->fd, EVIOCGABS(i), absinfo);
             if (len < 0) {
                 xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGABS(%d) failed: %s\n",
@@ -251,12 +251,12 @@ Event_Init(InputInfoPtr info)
 static void
 Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
 {
-    xf86IDrvMsg(info, X_INFO, "    min = %d\n", absinfo->minimum);
-    xf86IDrvMsg(info, X_INFO, "    max = %d\n", absinfo->maximum);
+    PROBE_DBG(info, "    min = %d\n", absinfo->minimum);
+    PROBE_DBG(info, "    max = %d\n", absinfo->maximum);
     if (absinfo->fuzz)
-        xf86IDrvMsg(info, X_INFO, "    fuzz = %d\n", absinfo->fuzz);
+        PROBE_DBG(info, "    fuzz = %d\n", absinfo->fuzz);
     if (absinfo->resolution)
-        xf86IDrvMsg(info, X_INFO, "    res = %d\n", absinfo->resolution);
+        PROBE_DBG(info, "    res = %d\n", absinfo->resolution);
 }
 
 void
@@ -285,9 +285,8 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
         break;
 
     default:
-        xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld %u[%u] = %d\n",
-                    ev->time.tv_sec, ev->time.tv_usec, ev->type, ev->code,
-                    ev->value);
+        DBG(info, "@ %ld.%06ld %u[%u] = %d\n", ev->time.tv_sec,
+            ev->time.tv_usec, ev->type, ev->code, ev->value);
     }
 }
 
@@ -313,14 +312,14 @@ Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
     EventStatePtr evstate = &cmt->evstate;
     Gesture_Process_Slots(gesture, evstate, &ev->time);
     MT_Print_Slots(info);
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
+    DBG(info, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
         ev->time.tv_sec, ev->time.tv_usec);
 }
 
 static void
 Event_Syn_MT_Report(InputInfoPtr info, struct input_event* ev)
 {
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ........ MT_SYN_REPORT .......\n",
+    DBG(info, "@ %ld.%06ld  ........ MT_SYN_REPORT .......\n",
         ev->time.tv_sec, ev->time.tv_usec);
 }
 
@@ -331,7 +330,7 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
     EventStatePtr evstate = &cmt->evstate;
     unsigned value = ev->value;
 
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  KEY [%d] = %d\n",
+    DBG(info, "@ %ld.%06ld  KEY [%d] = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
 
     switch (ev->code) {
@@ -355,7 +354,7 @@ Event_Abs(InputInfoPtr info, struct input_event* ev)
     } else if (IS_ABS_MT(ev->code)) {
         Event_Abs_MT(info, ev);
     } else {
-        xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS [%d] = %d\n",
+        DBG(info, "@ %ld.%06ld  ABS [%d] = %d\n",
             ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
     }
 }
@@ -363,7 +362,7 @@ Event_Abs(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Abs_MT_Slot(InputInfoPtr info, struct input_event* ev)
 {
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
+    DBG(info, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->value);
 
     MT_Slot_Set(info, ev->value);
@@ -377,7 +376,7 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     struct input_absinfo* axis = evstate->mt_axes[MT_CODE(ev->code)];
     MtSlotPtr slot = evstate->slot_current;
 
-    xf86IDrvMsg(info, X_INFO, "@ %ld.%06ld  ABS_MT[%02x] = %d\n",
+    DBG(info, "@ %ld.%06ld  ABS_MT[%02x] = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
 
     if (axis == NULL) {
@@ -390,13 +389,14 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     if ((ev->code != ABS_MT_TRACKING_ID)
                     && ((ev->value < axis->minimum)
                         || (ev->value > axis->maximum))) {
-        xf86IDrvMsg(info, X_INFO,
+        xf86IDrvMsgVerb(info, X_WARNING, DBG_VERB,
             "ABS_MT[%02x] = %d : value out of range [%d .. %d]\n",
             ev->code, ev->value, axis->minimum, axis->maximum);
     }
 
     if (slot == NULL) {
-        xf86IDrvMsg(info, X_ERROR, "MT slot not set. Ignoring ABS_MT event\n");
+        xf86IDrvMsg(info, X_ERROR,
+            "MT slot not set. Ignoring ABS_MT event\n");
         return;
     }
 
