@@ -134,18 +134,23 @@ static void Gesture_Gesture_Ready(void* client_data,
     const int kScrollBtnLeft  = 6;
     const int kScrollBtnRight = 7;
     DeviceIntPtr dev = client_data;
+    InputInfoPtr info = dev->public.devicePrivate;
     int hscroll, vscroll;
+
     switch (gesture->type) {
         case kGestureTypeContactInitiated:
             /* TODO(adlr): handle contact initiated */
             break;
         case kGestureTypeMove:
+            DBG(info, "Gesture Move: (%d, %d)\n",
+                (int)gesture->details.move.dx, (int)gesture->details.move.dy);
             xf86PostMotionEvent(dev, 0, 0, 2,
                 (int)gesture->details.move.dx, (int)gesture->details.move.dy);
             break;
         case kGestureTypeScroll:
             hscroll = (int)gesture->details.scroll.dx;
             vscroll = (int)gesture->details.scroll.dy;
+            DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
             for (int type = 0; type < 2; type++) {
                 int button = 0;
                 int magnitude = 0;
@@ -163,6 +168,8 @@ static void Gesture_Gesture_Ready(void* client_data,
             }
             break;
         case kGestureTypeButtonsChange:
+            DBG(info, "Gesture Button Change: down=0x%02x up=0x%02x\n",
+                gesture->details.buttons.down, gesture->details.buttons.up);
             if (gesture->details.buttons.down & GESTURES_BUTTON_LEFT)
                 xf86PostButtonEvent(dev, 0, 1, 1, 0, 0);
             if (gesture->details.buttons.down & GESTURES_BUTTON_MIDDLE)
