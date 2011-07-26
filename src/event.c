@@ -131,15 +131,15 @@ Event_Init(InputInfoPtr info)
                      strerror(errno));
          return !Success;
     }
-    xf86IDrvMsg(info, X_INFO, "vendor: %02X, product: %02X\n", cmt->id.vendor,
-                cmt->id.product);
+    xf86IDrvMsg(info, X_PROBED,
+        "vendor: %02X, product: %02X\n", cmt->id.vendor, cmt->id.product);
 
     if (ioctl(info->fd, EVIOCGNAME(sizeof(cmt->name) - 1), cmt->name) < 0) {
         xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGNAME failed: %s\n",
                     strerror(errno));
         return !Success;
     }
-    xf86IDrvMsg(info, X_INFO, "name: %s\n", cmt->name);
+    xf86IDrvMsg(info, X_PROBED, "name: %s\n", cmt->name);
 
     len = ioctl(info->fd, EVIOCGPROP(sizeof(cmt->prop_bitmask)),
                 cmt->prop_bitmask);
