@@ -15,20 +15,6 @@
 #include "gesture.h"
 #include "properties.h"
 
-/*
- * xf86IDrvMsg is not introduced until ABI12.
- * Until then, manually prepend our module name to the format string.
- */
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-#define xf86IDrvMsgVerb(info, type, verb, format, ...) \
-    xf86MsgVerb((type), (verb), "%s: %s: " format, info->drv->driverName, \
-        info->name, ##__VA_ARGS__)
-
-#define xf86IDrvMsg(info, type, format, ...) \
-    xf86Msg((type), "%s: %s: " format, info->drv->driverName, info->name, \
-        ##__VA_ARGS__)
-#endif
-
 /* Message Log Verbosity for debug messages */
 #define DBG_VERB    7
 
