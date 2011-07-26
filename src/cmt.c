@@ -223,18 +223,14 @@ ReadInput(InputInfoPtr info)
                 close(info->fd);
                 info->fd = -1;
             } else if (errno != EAGAIN) {
-                /* Use X_NONE to avoid alloc */
-                xf86MsgVerb(X_NONE, 0, "%s: Read error: %s\n", info->name,
-                            strerror(errno));
+                xf86IDrvMsg(info, X_ERROR, "Read error: %s\n", strerror(errno));
             }
             break;
         }
 
         /* kernel always delivers complete events, so len must be sizeof *ev */
         if (len % sizeof(*ev)) {
-            /* Use X_NONE to avoid alloc */
-            xf86MsgVerb(X_NONE, 0, "%s: Read error: %s\n", info->name,
-                        strerror(errno));
+            xf86IDrvMsg(info, X_ERROR, "Read error: %s\n", strerror(errno));
             break;
         }
 
