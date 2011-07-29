@@ -40,7 +40,7 @@ Gesture_Init(GesturePtr rec, InputInfoPtr info)
     hwprops.res_y           = props->res_y;
     hwprops.screen_x_dpi    = 133;
     hwprops.screen_y_dpi    = 133;
-    hwprops.max_finger_cnt  = evstate->slot_max - evstate->slot_min + 1;
+    hwprops.max_finger_cnt  = evstate->slot_count;
     hwprops.supports_t5r2   = Event_Get_T5R2(info);;
     hwprops.support_semi_mt = Event_Get_Semi_MT(info);
     /* buttonpad means a physical button under the touch surface */
@@ -91,8 +91,7 @@ Gesture_Process_Slots(GesturePtr rec,
 {
     int i;
     MtSlotPtr slot;
-    int num_slots = evstate->slot_max - evstate->slot_min + 1;
-    struct FingerState fingers[num_slots];
+    struct FingerState fingers[evstate->slot_count];
     struct HardwareState hwstate = {
         StimeFromTimeval(tv),
         MT_XButtons_To_Gestures_Buttons(evstate->buttons),
@@ -105,7 +104,7 @@ Gesture_Process_Slots(GesturePtr rec,
         return;
 
     current_finger = 0;
-    for (i = 0; i < num_slots; i++) {
+    for (i = 0; i < evstate->slot_count; i++) {
         slot = &evstate->slots[i];
         if (slot->tracking_id == -1)
             continue;

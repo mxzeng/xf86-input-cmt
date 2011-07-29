@@ -114,18 +114,16 @@ MTB_Init(InputInfoPtr info, int min, int max, int current)
 {
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
-    int num_slots;
     int i;
 
     evstate->slot_min = min;
-    evstate->slot_max = max;
+    evstate->slot_count = max - min + 1;
 
-    num_slots = max - min + 1;
-    evstate->slots = calloc(sizeof(MtSlotRec), num_slots);
+    evstate->slots = calloc(sizeof(MtSlotRec), evstate->slot_count);
     if (evstate->slots == NULL)
         return BadAlloc;
 
-    for (i=0; i < num_slots; i++)
+    for (i=0; i < evstate->slot_count; i++)
         evstate->slots[i].tracking_id = -1;
 
     MT_Slot_Set(info, current);
@@ -148,15 +146,17 @@ MT_Slot_Set(InputInfoPtr info, int value)
 {
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
+    int slot_min = evstate->slot_min;
+    int slot_max = evstate->slot_min + evstate->slot_count - 1;
 
-    if (value < evstate->slot_min || value > evstate->slot_max) {
+    if (value < slot_min || value > slot_max) {
         evstate->slot_current = NULL;
-        xf86IDrvMsg(info, X_ERROR, "MT Slot %d is out of range [%d .. %d].\n",
-                    value, evstate->slot_min, evstate->slot_max);
+        xf86IDrvMsg(info, X_WARNING,
+            "MT Slot %d not in range [%d .. %d]\n", value, slot_min, slot_max);
         return;
     }
 
-    evstate->slot_current = &evstate->slots[value - evstate->slot_min];
+    evstate->slot_current = &evstate->slots[value - slot_min];
 }
 
 
@@ -184,13 +184,15 @@ MT_Print_Slots(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
+    int slot_min = evstate->slot_min;
+    int slot_max = evstate->slot_min + evstate->slot_count;
     int i;
 
-    for (i = evstate->slot_min; i <= evstate->slot_max; i++) {
-        MtSlotPtr slot = &evstate->slots[i - evstate->slot_min];
+    for (i = 0; i < slot_max; i++) {
+        MtSlotPtr slot = &evstate->slots[i];
         if (slot->tracking_id == -1)
             continue;
-        DBG(info, "Slot %d:\n", i);
+        DBG(info, "Slot %d:\n", slot_min + i);
         MT_Slot_Print(info, slot);
     }
 }

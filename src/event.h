@@ -20,7 +20,7 @@
 
 typedef struct {
     int slot_min;
-    int slot_max;
+    int slot_count;
     MtSlotPtr slots;
     MtSlotPtr slot_current;
 
