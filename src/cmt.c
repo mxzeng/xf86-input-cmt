@@ -148,7 +148,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
         info->fd = -1;
     }
 
-    rc = Gesture_Init(&cmt->gesture, info);
+    rc = Gesture_Init(&cmt->gesture);
     if (rc != Success)
         goto PreInit_error;
 
@@ -249,12 +249,20 @@ static Bool
 DeviceInit(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    int rc;
 
     DBG(info, "DeviceInit\n");
 
     InitializeXDevice(dev);
     dev->public.on = FALSE;
-    return PropertyInit(dev);
+    rc = PropertyInit(dev);
+    if (rc != Success)
+        return rc;
+
+    Gesture_Device_Init(&cmt->gesture, dev);
+
+    return Success;
 }
 
 static Bool
@@ -273,7 +281,7 @@ DeviceOn(DeviceIntPtr dev)
     xf86FlushInput(info->fd);
     xf86AddEnabledDevice(info);
     dev->public.on = TRUE;
-    Gesture_Device_On(&cmt->gesture, dev);
+    Gesture_Device_On(&cmt->gesture);
     return Success;
 }
 
@@ -300,10 +308,13 @@ static Bool
 DeviceClose(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
 
     DBG(info, "DeviceClose\n");
 
     DeviceOff(dev);
+    Gesture_Device_Close(&cmt->gesture);
+
     return Success;
 }
 

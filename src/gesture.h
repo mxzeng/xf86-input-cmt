@@ -17,21 +17,32 @@
 
 typedef struct {
     GestureInterpreter* interpreter;  /* The interpreter from Gestures lib */
+    DeviceIntPtr dev;
 } GestureRec, *GesturePtr;
 
-int Gesture_Init(GesturePtr, InputInfoPtr);
+int Gesture_Init(GesturePtr);
 void Gesture_Free(GesturePtr);
 
 /*
- * Here we store the DeviceIntPtr which is used to perform gestures
+ * Pass Device specific properties to gestures
  */
-void Gesture_Device_On(GesturePtr, DeviceIntPtr);
+void Gesture_Device_Init(GesturePtr, DeviceIntPtr);
+
+/*
+ * Start performing gestures
+ */
+void Gesture_Device_On(GesturePtr);
 
 /*
  * Here we cancel performing gestures, forgetting the DeviceIntPtr we were
  * passed earlier, if any.
  */
 void Gesture_Device_Off(GesturePtr);
+
+/*
+ * Called to perform cleanup when the X server is closing the device.
+ */
+void Gesture_Device_Close(GesturePtr);
 
 /*
  * Sends the current hardware state to the Gestures library.

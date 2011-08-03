@@ -20,16 +20,34 @@ static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture);
 
 int
-Gesture_Init(GesturePtr rec, InputInfoPtr info)
+Gesture_Init(GesturePtr rec)
 {
-    CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
-    EventStatePtr evstate = &cmt->evstate;
-
-    struct HardwareProperties hwprops;
     rec->interpreter = NewGestureInterpreter();
     if (!rec->interpreter)
         return !Success;
+
+    return Success;
+}
+
+void
+Gesture_Free(GesturePtr rec)
+{
+    DeleteGestureInterpreter(rec->interpreter);
+    rec->interpreter = NULL;
+    rec->dev = NULL;
+}
+
+void
+Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
+    EventStatePtr evstate = &cmt->evstate;
+    struct HardwareProperties hwprops;
+
+    /* Store the device for which to generate gestures */
+    rec->dev = dev;
 
     /* TODO: support different models */
     hwprops.left            = props->area_left;
@@ -47,28 +65,25 @@ Gesture_Init(GesturePtr rec, InputInfoPtr info)
     hwprops.is_button_pad   = Event_Get_Button_Pad(info);
 
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
-    return Success;
 }
 
 void
-Gesture_Free(GesturePtr rec)
-{
-    DeleteGestureInterpreter(rec->interpreter);
-    rec->interpreter = NULL;
-}
-
-void
-Gesture_Device_On(GesturePtr rec, DeviceIntPtr dev)
+Gesture_Device_On(GesturePtr rec)
 {
     GestureInterpreterSetCallback(rec->interpreter,
                                   &Gesture_Gesture_Ready,
-                                  dev);
+                                  rec->dev);
 }
 
 void
 Gesture_Device_Off(GesturePtr rec)
 {
     GestureInterpreterSetCallback(rec->interpreter, NULL, NULL);
+}
+
+void
+Gesture_Device_Close(GesturePtr rec)
+{
 }
 
 static unsigned
