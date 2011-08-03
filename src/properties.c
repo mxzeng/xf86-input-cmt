@@ -183,8 +183,11 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
             props->res_y = ((INT32*)prop->data)[0];
             props->res_x = ((INT32*)prop->data)[1];
         }
-    } else if (atom == prop_device || atom == prop_product_id)
+    } else if (atom == prop_device || atom == prop_product_id) {
+        xf86IDrvMsg(info, X_WARNING, "Cannot set read only prop: %s (%d)\n",
+                    NameForAtom(atom), (int)atom);
         return BadAccess; /* Read-only properties */
+    }
 
     return Success;
 }
@@ -252,7 +255,7 @@ PropInit_ProductId(DeviceIntPtr dev)
 
     vals[0] = cmt->id.vendor;
     vals[1] = cmt->id.product;
-    prop_device = PropMake_Int(dev, XI_PROP_PRODUCT_ID, 32, 2, vals);
+    prop_product_id = PropMake_Int(dev, XI_PROP_PRODUCT_ID, 32, 2, vals);
 }
 
 static void
