@@ -7,39 +7,11 @@
 #include "gesture.h"
 
 #include <gestures/gestures.h>
-#include <xorg/xf86_OSproc.h>
 
 #include "cmt.h"
 #include "properties.h"
 
 static unsigned MT_XButtons_To_Gestures_Buttons(unsigned);
-
-/*
- * Gestures timer functions
- */
-static GesturesTimer* Gesture_TimerCreate(void*);
-static void Gesture_TimerSet(void*,
-                             GesturesTimer*,
-                             stime_t,
-                             GesturesTimerCallback,
-                             void*);
-static void Gesture_TimerCancel(void*, GesturesTimer*);
-static void Gesture_TimerFree(void*, GesturesTimer*);
-
-static CARD32 Gesture_TimerCallback(OsTimerPtr, CARD32, pointer);
-
-struct GesturesTimer {
-    OsTimerPtr timer;
-    GesturesTimerCallback callback;
-    void* data;
-};
-
-static GesturesTimerProvider Gesture_GesturesTimerProvider = {
-    .create_fn = Gesture_TimerCreate,
-    .set_fn = Gesture_TimerSet,
-    .cancel_fn = Gesture_TimerCancel,
-    .free_fn = Gesture_TimerFree
-};
 
 /*
  * Callback for Gestures library.
@@ -53,9 +25,6 @@ Gesture_Init(GesturePtr rec)
     rec->interpreter = NewGestureInterpreter();
     if (!rec->interpreter)
         return !Success;
-    GestureInterpreterSetTimerProvider(rec->interpreter,
-                                       &Gesture_GesturesTimerProvider,
-                                       NULL);
 
     return Success;
 }
@@ -63,7 +32,6 @@ Gesture_Init(GesturePtr rec)
 void
 Gesture_Free(GesturePtr rec)
 {
-    GestureInterpreterSetTimerProvider(rec->interpreter, NULL, NULL);
     DeleteGestureInterpreter(rec->interpreter);
     rec->interpreter = NULL;
     rec->dev = NULL;
@@ -230,76 +198,4 @@ static void Gesture_Gesture_Ready(void* client_data,
                 xf86PostButtonEvent(dev, 0, 3, 0, 0, 0);
             break;
     }
-}
-
-static GesturesTimer*
-Gesture_TimerCreate(void* unused)
-{
-    GesturesTimer* ret = (GesturesTimer*)calloc(1, sizeof(GesturesTimer));
-    if (!ret)
-        return NULL;
-    ret->timer = TimerSet(NULL, 0, 0, NULL, 0);
-    if (!ret->timer) {
-        free(ret);
-        return NULL;
-    }
-    return ret;
-}
-
-static void
-Gesture_TimerSet(void* unused,
-                 GesturesTimer* timer,
-                 stime_t delay,
-                 GesturesTimerCallback callback,
-                 void* data)
-{
-    CARD32 ms = delay * 1000.0;
-
-    if (!timer)
-        return;
-    timer->callback = callback;
-    timer->data = data;
-    if (ms == 0)
-        ms = 1;
-    TimerSet(timer->timer, 0, ms, Gesture_TimerCallback, timer);
-}
-
-static void
-Gesture_TimerCancel(void* unused, GesturesTimer* timer)
-{
-    TimerCancel(timer->timer);
-}
-
-static void
-Gesture_TimerFree(void* unused, GesturesTimer* timer)
-{
-    TimerFree(timer->timer);
-    timer->timer = NULL;
-    free(timer);
-}
-
-static CARD32
-Gesture_TimerCallback(OsTimerPtr timer,
-                      CARD32 millis,
-                      pointer data)
-{
-    int sigstate = xf86BlockSIGIO();
-    GesturesTimer* tm = (GesturesTimer*)data;
-    struct timeval tv;
-    stime_t now;
-    stime_t rc;
-
-    gettimeofday(&tv, NULL);
-    now = StimeFromTimeval(&tv);
-
-    rc = tm->callback(now, tm->data);
-    if (rc >= 0.0) {
-        CARD32 ms = rc * 1000.0;
-        if (ms == 0)
-            ms = 1;
-        TimerSet(timer, 0, ms, Gesture_TimerCallback, tm);
-    }
-
-    xf86UnblockSIGIO(sigstate);
-    return 0;
 }
