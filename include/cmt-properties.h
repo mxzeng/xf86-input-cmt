@@ -10,13 +10,30 @@
 /**
  * Descriptions of properties exported by the driver.
  *
- * CMT_PROP_* - Device property name, used with xinput set-prop
+ * XI_PROP_*  - X Input Properties common to all X input drivers
+ * CMT_PROP_* - Device Property name, used in .conf files and with xinput
  */
 
-/* 32 bit, 4 values, left, right, top, bottom */
-#define CMT_PROP_AREA "Active Area"
+#ifndef XI_PROP_PRODUCT_ID
+#define XI_PROP_PRODUCT_ID "Device Product ID"
+#endif
 
-/* 32 bit, 2 values, vertical, horizontal */
-#define CMT_PROP_RES "Sensor Resolution"
+#ifndef XI_PROP_VENDOR_ID
+#define XI_PROP_VENDOR_ID "Device Vendor ID"
+#endif
+
+#ifndef XI_PROP_DEVICE_NODE
+#define XI_PROP_DEVICE_NODE "Device Node"
+#endif
+
+/* 32 bit */
+#define CMT_PROP_AREA_LEFT   "Active Area Left"
+#define CMT_PROP_AREA_RIGHT  "Active Area Right"
+#define CMT_PROP_AREA_TOP    "Active Area Top"
+#define CMT_PROP_AREA_BOTTOM "Active Area Bottom"
+
+/* 32 bit */
+#define CMT_PROP_RES_Y       "Vertical Resolution"
+#define CMT_PROP_RES_X       "Horizontal Resolution"
 
 #endif

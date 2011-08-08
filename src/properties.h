@@ -7,28 +7,9 @@
 #ifndef _PROPERTIES_H_
 #define _PROPERTIES_H_
 
+#include <gestures/gestures.h>
 #include <xf86.h>
 #include <xf86Xinput.h>
-
-/**
- * Descriptions of xorg configuration variables for the driver.
- *
- * CMT_CONF_* - Device configuration setting name, used in .conf files
- * CMT_DEF_*  - Device configuration property default value,
- *              used if not set in .conf file.
- */
-
-#define CMT_CONF_AREA_LEFT   "Left"
-
-#define CMT_CONF_AREA_RIGHT  "Right"
-
-#define CMT_CONF_AREA_TOP    "Top"
-
-#define CMT_CONF_AREA_BOTTOM "Bottom"
-
-#define CMT_CONF_RES_Y       "Vertical Resolution"
-
-#define CMT_CONF_RES_X       "Horizontal Resolution"
 
 
 typedef struct {
@@ -40,7 +21,9 @@ typedef struct {
     int  res_x;
 } CmtProperties, *CmtPropertiesPtr;
 
-int PropertyInit(DeviceIntPtr);
-void ProcessConfOptions(InputInfoPtr, pointer);
+int PropertiesInit(DeviceIntPtr);
+void PropertiesClose(DeviceIntPtr);
+
+extern GesturesPropProvider prop_provider;
 
 #endif

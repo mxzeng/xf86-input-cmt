@@ -9,6 +9,7 @@
 
 #include <linux/input.h>
 
+#include <gestures/gestures.h>
 #include <xf86.h>
 
 #include "event.h"
@@ -39,6 +40,7 @@ typedef struct {
     CmtProperties props;
     EventStateRec evstate;
     GestureRec gesture;
+    GesturesProp* prop_list;
 
     char* device;
     long  handlers;

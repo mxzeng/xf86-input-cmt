@@ -97,6 +97,8 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     hwprops.is_button_pad   = Event_Get_Button_Pad(info);
 
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
+
+    GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider, dev);
 }
 
 void
@@ -116,6 +118,7 @@ Gesture_Device_Off(GesturePtr rec)
 void
 Gesture_Device_Close(GesturePtr rec)
 {
+    GestureInterpreterSetPropProvider(rec->interpreter, NULL, NULL);
 }
 
 static unsigned

@@ -138,9 +138,6 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (rc != Success)
         goto PreInit_error;
 
-    /* Process Configuration Options after probing kernel device */
-    ProcessConfOptions(info, info->options);
-
     xf86ProcessCommonOptions(info, info->options);
 
     if (info->fd != -1) {
@@ -256,7 +253,8 @@ DeviceInit(DeviceIntPtr dev)
 
     InitializeXDevice(dev);
     dev->public.on = FALSE;
-    rc = PropertyInit(dev);
+
+    rc = PropertiesInit(dev);
     if (rc != Success)
         return rc;
 
@@ -293,14 +291,13 @@ DeviceOff(DeviceIntPtr dev)
 
     DBG(info, "DeviceOff\n");
 
+    dev->public.on = FALSE;
     Gesture_Device_Off(&cmt->gesture);
-
     if (info->fd != -1) {
         xf86RemoveEnabledDevice(info);
         close(info->fd);
         info->fd = -1;
     }
-    dev->public.on = FALSE;
     return Success;
 }
 
@@ -314,7 +311,7 @@ DeviceClose(DeviceIntPtr dev)
 
     DeviceOff(dev);
     Gesture_Device_Close(&cmt->gesture);
-
+    PropertiesClose(dev);
     return Success;
 }
 

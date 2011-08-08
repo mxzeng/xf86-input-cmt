@@ -18,89 +18,220 @@
 #include "cmt.h"
 #include "cmt-properties.h"
 
-#ifndef XI_PROP_PRODUCT_ID
-#define XI_PROP_PRODUCT_ID "Device Product ID"
-#endif
+typedef enum PropType {
+    PropTypeInt,
+    PropTypeShort,
+    PropTypeBool,
+    PropTypeString,
+    PropTypeReal,
+} PropType;
 
-#ifndef XI_PROP_DEVICE_NODE
-#define XI_PROP_DEVICE_NODE "Device Node"
-#endif
+struct GesturesProp {
+    GesturesProp* next;
+    Atom atom;
+    PropType type;
+    union {
+        void* v;
+        int* i;
+        short* h;
+        GesturesPropBool* b;
+        const char** s;
+        double* r;
+    } val;
+};
 
-/* Property Atoms */
-Atom prop_device;
-Atom prop_product_id;
-Atom prop_active_area;
-Atom prop_active_res;
-
+/* XIProperty callbacks */
 static int PropertySet(DeviceIntPtr, Atom, XIPropertyValuePtr, BOOL);
 static int PropertyGet(DeviceIntPtr, Atom);
 static int PropertyDel(DeviceIntPtr, Atom);
 
-static Atom PropMake(DeviceIntPtr, char*, Atom, int, int, pointer);
-static Atom PropMake_Int(DeviceIntPtr, char*, int, int, pointer);
-static Atom PropMake_String(DeviceIntPtr, char*, pointer);
+/* Property List management functions */
+static GesturesProp* PropList_Find(DeviceIntPtr, Atom);
+static void PropList_Insert(DeviceIntPtr, GesturesProp*);
+static void PropList_Remove(DeviceIntPtr, GesturesProp*);
+static void PropList_Free(DeviceIntPtr);
 
-static void PropInit_Device(DeviceIntPtr);
-static void PropInit_ProductId(DeviceIntPtr);
-static void PropInit_ActiveArea(DeviceIntPtr);
-static void PropInit_Resolution(DeviceIntPtr);
+/* Common Property Creation function */
+static GesturesProp* PropCreate(DeviceIntPtr, const char*, PropType, void*,
+                                void*);
+
+/* Typed Property Creation functions */
+static GesturesProp* PropCreate_Int(void*, const char*, int*, const int);
+static GesturesProp* PropCreate_Short(void*, const char*, short*, const short);
+static GesturesProp* PropCreate_Bool(void*, const char*, GesturesPropBool*,
+                                     const GesturesPropBool);
+static GesturesProp* PropCreate_String(void*, const char*, const char**,
+                                       const char*);
+static GesturesProp* PropCreate_Real(void*, const char*, double*, const double);
+
+static void Prop_Free(void*, GesturesProp*);
+
+/* Typed PropertySet Callback Handlers */
+static int PropSet_Int(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
+static int PropSet_Short(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
+static int PropSet_Bool(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
+static int PropSet_String(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr,BOOL);
+static int PropSet_Real(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
+
 
 
 /**
- * Process Configuration Options
+ * Global GesturesPropProvider
  */
-void
-ProcessConfOptions(InputInfoPtr info, pointer opts)
-{
-    CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
+GesturesPropProvider prop_provider = {
+    PropCreate_Int,
+    PropCreate_Short,
+    PropCreate_Bool,
+    PropCreate_String,
+    PropCreate_Real,
+    Prop_Free
+};
 
-    /*
-     * Initialize useable trackpad area. If not user configured,
-     * use x/y valuator min/max as reported by kernel driver.
-     */
-    props->area_left = xf86SetIntOption(opts, CMT_CONF_AREA_LEFT,
-                                        Event_Get_Left(info));
-
-    props->area_right = xf86SetIntOption(opts, CMT_CONF_AREA_RIGHT,
-                                         Event_Get_Right(info));
-
-    props->area_top = xf86SetIntOption(opts, CMT_CONF_AREA_TOP,
-                                       Event_Get_Top(info));
-
-    props->area_bottom = xf86SetIntOption(opts, CMT_CONF_AREA_BOTTOM,
-                                          Event_Get_Bottom(info));
-
-    /*
-     * Initialize useable trackpad area. If not user configured,
-     * use x/y valuator min/max as reported by kernel driver.
-     */
-    props->res_y = xf86SetIntOption(opts, CMT_CONF_RES_Y,
-                                         Event_Get_Res_Y(info));
-
-    props->res_x = xf86SetIntOption(opts, CMT_CONF_RES_X,
-                                        Event_Get_Res_X(info));
-}
 
 /**
  * Initialize Device Properties
  */
 int
-PropertyInit(DeviceIntPtr dev)
+PropertiesInit(DeviceIntPtr dev)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
+
+    cmt->handlers = XIRegisterPropertyHandler(dev, PropertySet, PropertyGet,
+                                              PropertyDel);
+    if (cmt->handlers == 0)
+        return BadAlloc;
+
+    /* Create Device Properties */
+
+    /* Read Only properties */
+    PropCreate_String(dev, XI_PROP_DEVICE_NODE, NULL, cmt->device);
+    PropCreate_Short(dev, XI_PROP_VENDOR_ID, NULL, cmt->id.vendor);
+    PropCreate_Short(dev, XI_PROP_PRODUCT_ID, NULL, cmt->id.product);
+
+    /*
+     * Useable trackpad area. If not configured in .conf file,
+     * use x/y valuator min/max as reported by kernel driver.
+     */
+    PropCreate_Int(dev, CMT_PROP_AREA_LEFT, &props->area_left,
+                   Event_Get_Left(info));
+    PropCreate_Int(dev, CMT_PROP_AREA_RIGHT, &props->area_right,
+                   Event_Get_Right(info));
+    PropCreate_Int(dev, CMT_PROP_AREA_TOP, &props->area_top,
+                   Event_Get_Top(info));
+    PropCreate_Int(dev, CMT_PROP_AREA_BOTTOM, &props->area_bottom,
+                   Event_Get_Bottom(info));
+
+    /*
+     * Trackpad resolution (pixels/mm). If not configured in .conf file,
+     * use x/y resolution as reported by kernel driver.
+     */
+    PropCreate_Int(dev, CMT_PROP_RES_Y, &props->res_y, Event_Get_Res_Y(info));
+    PropCreate_Int(dev, CMT_PROP_RES_X, &props->res_x, Event_Get_Res_X(info));
+
+    return Success;
+}
+
+/**
+ * Cleanup Device Properties
+ */
+void
+PropertiesClose(DeviceIntPtr dev)
 {
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
-    cmt->handlers = XIRegisterPropertyHandler(info->dev, PropertySet,
-                                              PropertyGet, PropertyDel);
-    if (cmt->handlers == 0)
-        return BadAlloc;
+    PropList_Free(dev);
+    XIUnregisterPropertyHandler(dev, cmt->handlers);
+}
 
-    /* Create and initialize Device Properties and their Atoms */
-    PropInit_Device(dev);
-    PropInit_ProductId(dev);
-    PropInit_ActiveArea(dev);
-    PropInit_Resolution(dev);
+/**
+ * Type-Specific Device Property Set Handlers
+ */
+static int
+PropSet_Int(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
+            BOOL checkonly)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+
+    if (val->type != XA_INTEGER || val->format != 32 || val->size != 1)
+        return BadMatch;
+
+    if (!checkonly) {
+        *prop->val.i = *(CARD32*)val->data;
+        DBG(info, "\"%s\" = %d\n", NameForAtom(prop->atom), *prop->val.i);
+    }
+
+    return Success;
+}
+
+static int
+PropSet_Short(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
+              BOOL checkonly)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+
+    if (val->type != XA_INTEGER || val->format != 16 || val->size != 1)
+        return BadMatch;
+
+    if (!checkonly) {
+        *prop->val.h = *(CARD16*)val->data;
+        DBG(info, "\"%s\" = %d\n", NameForAtom(prop->atom), *prop->val.h);
+    }
+
+    return Success;
+}
+
+static int
+PropSet_Bool(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
+             BOOL checkonly)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+
+    if (val->type != XA_INTEGER || val->format != 8 || val->size != 1)
+        return BadMatch;
+
+    if (!checkonly) {
+        *prop->val.b = !!(*(CARD8*)val->data);
+        DBG(info, "\"%s\" = %s\n", NameForAtom(prop->atom),
+            *prop->val.b ? "True" : "False");
+    }
+
+    return Success;
+}
+
+static int
+PropSet_String(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
+               BOOL checkonly)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+
+    if (val->type != XA_STRING || val->format != 8)
+        return BadMatch;
+
+    if (!checkonly) {
+        *prop->val.s = val->data;
+        DBG(info, "\"%s\" = \"%s\"\n", NameForAtom(prop->atom), *prop->val.s);
+    }
+
+    return Success;
+}
+
+static int
+PropSet_Real(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
+             BOOL checkonly)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    Atom XA_FLOAT = XIGetKnownProperty(XATOM_FLOAT);
+
+    if (val->type != XA_FLOAT || val->format != 32 || val->size != 1)
+        return BadMatch;
+
+    if (!checkonly) {
+        *prop->val.r = *(float*)val->data;
+        DBG(info, "\"%s\" = %g\n", NameForAtom(prop->atom), *prop->val.r);
+    }
 
     return Success;
 }
@@ -109,42 +240,32 @@ PropertyInit(DeviceIntPtr dev)
  * Device Property Handlers
  */
 static int
-PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr prop,
+PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
             BOOL checkonly)
 {
-    InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
+    GesturesProp* prop;
 
-    if (!checkonly)
-        DBG(info, "PropertySet: %s (%d)\n", NameForAtom(atom), (int)atom);
+    prop = PropList_Find(dev, atom);
+    if (!prop)
+        return Success; /* Unknown or uninitialized Property */
 
-    if (atom == prop_active_area) {
-        if (prop->type != XA_INTEGER || prop->format != 32 || prop->size != 4)
-            return BadMatch;
+    if (prop->val.v == NULL)
+        return BadAccess; /* Read-only property */
 
-        if (!checkonly) {
-            props->area_left   = ((INT32*)prop->data)[0];
-            props->area_right  = ((INT32*)prop->data)[1];
-            props->area_top    = ((INT32*)prop->data)[2];
-            props->area_bottom = ((INT32*)prop->data)[3];
-        }
-
-    } else if (atom == prop_active_res) {
-        if (prop->type != XA_INTEGER || prop->format != 32 || prop->size != 2)
-            return BadMatch;
-
-        if (!checkonly) {
-            props->res_y = ((INT32*)prop->data)[0];
-            props->res_x = ((INT32*)prop->data)[1];
-        }
-    } else if (atom == prop_device || atom == prop_product_id) {
-        xf86IDrvMsg(info, X_WARNING, "Cannot set read only prop: %s (%d)\n",
-                    NameForAtom(atom), (int)atom);
-        return BadAccess; /* Read-only properties */
+    switch (prop->type) {
+    case PropTypeInt:
+        return PropSet_Int(dev, prop, val, checkonly);
+    case PropTypeShort:
+        return PropSet_Short(dev, prop, val, checkonly);
+    case PropTypeBool:
+        return PropSet_Bool(dev, prop, val, checkonly);
+    case PropTypeString:
+        return PropSet_String(dev, prop, val, checkonly);
+    case PropTypeReal:
+        return PropSet_Real(dev, prop, val, checkonly);
+    default:
+        return BadMatch; /* Unknown property type */
     }
-
-    return Success;
 }
 
 static int
@@ -160,83 +281,218 @@ PropertyDel(DeviceIntPtr dev, Atom property)
 }
 
 /**
- * By-Type Device Property Creators
+ * Property List Management
  */
-static Atom
-PropMake(DeviceIntPtr dev, char* name, Atom type, int size, int len,
-         pointer vals)
+
+static GesturesProp*
+PropList_Find(DeviceIntPtr dev, Atom atom)
 {
-    Atom atom;
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    GesturesProp* p;
 
-    atom = MakeAtom(name, strlen(name), TRUE);
-    XIChangeDeviceProperty(dev, atom, type, size, PropModeReplace, len, vals,
-                           FALSE);
-    XISetDevicePropertyDeletable(dev, atom, FALSE);
+    for (p = cmt->prop_list; p && p->atom != atom; p = p->next)
+        continue;
 
-    return atom;
+    return p;
 }
 
-static Atom
-PropMake_Int(DeviceIntPtr dev, char* name, int size, int len, pointer vals)
+static void
+PropList_Insert(DeviceIntPtr dev, GesturesProp* prop)
 {
-    return PropMake(dev, name, XA_INTEGER, size, len, vals);
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+
+    prop->next = cmt->prop_list;
+    cmt->prop_list = prop;
 }
 
-static Atom
-PropMake_String(DeviceIntPtr dev, char* name, pointer str)
+static void
+PropList_Remove(DeviceIntPtr dev, GesturesProp* prop)
 {
-    return PropMake(dev, name, XA_STRING, 8, strlen(str), str);
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    GesturesProp* p;
+
+    if (!cmt->prop_list || !prop)
+        return;
+
+    if (cmt->prop_list == prop) {
+        cmt->prop_list = prop->next;
+        return;
+    }
+
+    for (p = cmt->prop_list; p->next; p = p->next)
+        if (p->next == prop) {
+            p->next = p->next->next;
+            return;
+        }
+}
+
+static void
+PropList_Free(DeviceIntPtr dev)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+
+    while (cmt->prop_list)
+        Prop_Free(dev, cmt->prop_list);
+}
+
+static void
+Prop_Free(void* priv, GesturesProp* prop)
+{
+    DeviceIntPtr dev = priv;
+
+    PropList_Remove(dev, prop);
+    XIDeleteDeviceProperty(dev, prop->atom, FALSE);
+    free(prop);
 }
 
 /**
- * Device Property Initializers
+ * Device Property Creators
  */
-
-static void
-PropInit_Device(DeviceIntPtr dev)
+static GesturesProp*
+PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
+           void* init)
 {
-    InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
+    GesturesProp* prop;
+    Atom atom;
+    Atom type_atom;
+    int size;
+    int format;
 
-    prop_device = PropMake_String(dev, XI_PROP_DEVICE_NODE, cmt->device);
+    atom = MakeAtom(name, strlen(name), TRUE);
+    if (atom == BAD_RESOURCE)
+        return NULL;
+
+    switch (type) {
+    case PropTypeInt:
+        type_atom = XA_INTEGER;
+        size = 1;
+        format = 32;
+        break;
+    case PropTypeShort:
+        type_atom = XA_INTEGER;
+        size = 1;
+        format = 16;
+        break;
+    case PropTypeBool:
+        type_atom = XA_INTEGER;
+        size = 1;
+        format = 8;
+        break;
+    case PropTypeString:
+        type_atom = XA_STRING;
+        size = strlen((const char*)init);
+        format = 8;
+        break;
+    case PropTypeReal:
+        type_atom = XIGetKnownProperty(XATOM_FLOAT);
+        size = 1;
+        format = 32;
+        break;
+    default: /* Unknown type */
+        return NULL;
+    }
+
+    if (XIChangeDeviceProperty(dev, atom, type_atom, format, PropModeReplace,
+                               size, init, FALSE) != Success)
+        return NULL;
+
+    XISetDevicePropertyDeletable(dev, atom, FALSE);
+
+    prop = PropList_Find(dev, atom);
+    if (!prop) {
+        prop = calloc(1, sizeof(*prop));
+        if (!prop)
+            return NULL;
+        PropList_Insert(dev, prop);
+    }
+
+    prop->atom = atom;
+    prop->type = type;
+    prop->val.v = val;
+
+    return prop;
 }
 
-static void
-PropInit_ProductId(DeviceIntPtr dev)
+GesturesProp*
+PropCreate_Int(void* priv, const char* name, int* val, const int init)
 {
+    DeviceIntPtr dev = priv;
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
-    uint32_t vals[2];
+    int cfg;
+    CARD32 cval;
 
-    vals[0] = cmt->id.vendor;
-    vals[1] = cmt->id.product;
-    prop_product_id = PropMake_Int(dev, XI_PROP_PRODUCT_ID, 32, 2, vals);
+    cfg = xf86SetIntOption(info->options, name, init);
+    if (val)
+        *val = cfg;
+    cval = (CARD32)cfg;
+
+    return PropCreate(dev, name, PropTypeInt, val, &cval);
 }
 
-static void
-PropInit_ActiveArea(DeviceIntPtr dev)
+GesturesProp*
+PropCreate_Short(void* priv, const char* name, short* val, const short init)
 {
+    DeviceIntPtr dev = priv;
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
-    uint32_t vals[4];
+    short cfg;
+    CARD16 cval;
 
-    vals[0] = (uint32_t)props->area_left;
-    vals[1] = (uint32_t)props->area_right;
-    vals[2] = (uint32_t)props->area_top;
-    vals[3] = (uint32_t)props->area_bottom;
-    prop_active_area = PropMake_Int(dev, CMT_PROP_AREA, 32, 4, vals);
+    cfg = xf86SetIntOption(info->options, name, init);
+    if (val)
+        *val = cfg;
+    cval = (CARD16)cfg;
+
+    return PropCreate(dev, name, PropTypeShort, val, &cval);
 }
 
-static void
-PropInit_Resolution(DeviceIntPtr dev)
+GesturesProp*
+PropCreate_Bool(void* priv, const char* name, GesturesPropBool* val,
+                const GesturesPropBool init)
 {
+    DeviceIntPtr dev = priv;
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
-    uint32_t vals[2];
+    BOOL cfg;
+    CARD8 cval;
 
-    vals[0] = (uint32_t)props->res_y;
-    vals[1] = (uint32_t)props->res_x;
-    prop_active_res = PropMake_Int(dev, CMT_PROP_RES, 32, 2, vals);
+    cfg = xf86SetBoolOption(info->options, name, (BOOL)!!init);
+    if (val)
+        *val = cfg;
+    cval = (CARD8)!!cfg;
+
+    return PropCreate(dev, name, PropTypeBool, val, &cval);
+}
+
+GesturesProp*
+PropCreate_String(void* priv, const char* name, const char** val,
+                  const char* init)
+{
+    DeviceIntPtr dev = priv;
+    InputInfoPtr info = dev->public.devicePrivate;
+    const char* cfg;
+
+    cfg = xf86SetStrOption(info->options, name, (char *)init);
+    if (val)
+        *val = cfg;
+
+    return PropCreate(dev, name, PropTypeString, val, (char *)cfg);
+}
+
+GesturesProp*
+PropCreate_Real(void* priv, const char* name, double* val, const double init)
+{
+    DeviceIntPtr dev = priv;
+    InputInfoPtr info = dev->public.devicePrivate;
+    double cfg;
+    float cval;
+
+    cfg = xf86SetRealOption(info->options, name, init);
+    if (val)
+        *val = cfg;
+    cval = (float)cfg;
+
+    return PropCreate(dev, name, PropTypeReal, val, &cval);
 }
