@@ -13,15 +13,6 @@
  * CMT_PROP_* - Device property name, used with xinput set-prop
  */
 
-/* 8 bit (BOOL) */
-#define CMT_PROP_TAPTOCLICK "Tap To Click"
-
-/* 32 bit */
-#define CMT_PROP_MOTION_SPEED "Motion Speed"
-
-/* 32 bit, 2 values, vertical, horizontal */
-#define CMT_PROP_SCROLL_SPEED "Scroll Speed"
-
 /* 32 bit, 4 values, left, right, top, bottom */
 #define CMT_PROP_AREA "Active Area"
 

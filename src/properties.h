@@ -18,18 +18,6 @@
  *              used if not set in .conf file.
  */
 
-#define CMT_CONF_TAPTOCLICK "Tap To Click"
-#define CMT_DEF_TAPTOCLICK  FALSE
-
-#define CMT_CONF_MOTION_SPEED "Motion Speed"
-#define CMT_DEF_MOTION_SPEED  100
-
-#define CMT_CONF_SCROLL_SPEED_V "Vertical Scroll Speed"
-#define CMT_DEF_SCROLL_SPEED_V  100
-
-#define CMT_CONF_SCROLL_SPEED_H "Horizontal Scroll Speed"
-#define CMT_DEF_SCROLL_SPEED_H  100
-
 #define CMT_CONF_AREA_LEFT   "Left"
 
 #define CMT_CONF_AREA_RIGHT  "Right"
@@ -44,10 +32,6 @@
 
 
 typedef struct {
-    Bool tap_to_click;
-    int  motion_speed;
-    int  scroll_speed_v;
-    int  scroll_speed_h;
     int  area_left;
     int  area_right;
     int  area_top;
