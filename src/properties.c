@@ -343,7 +343,12 @@ static void
 Prop_Free(void* priv, GesturesProp* prop)
 {
     DeviceIntPtr dev = priv;
+    InputInfoPtr info = dev->public.devicePrivate;
 
+    if (!prop)
+        return;
+
+    DBG(info, "Freeing Property: \"%s\"\n", NameForAtom(prop->atom));
     PropList_Remove(dev, prop);
     XIDeleteDeviceProperty(dev, prop->atom, FALSE);
     free(prop);
@@ -356,11 +361,14 @@ static GesturesProp*
 PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
            void* init)
 {
+    InputInfoPtr info = dev->public.devicePrivate;
     GesturesProp* prop;
     Atom atom;
     Atom type_atom;
     int size;
     int format;
+
+    DBG(info, "Creating Property: \"%s\"\n", name);
 
     atom = MakeAtom(name, strlen(name), TRUE);
     if (atom == BAD_RESOURCE)
