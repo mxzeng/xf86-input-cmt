@@ -14,8 +14,8 @@
 #include "cmt.h"
 #include "mt.h"
 
-#ifndef INPUT_PROP_SYNAPTICS_T5R2
-#define INPUT_PROP_SYNAPTICS_T5R2   0x04    /* synaptics track 5 report 2 */
+#ifndef BTN_TOOL_QUINTTAP
+#define BTN_TOOL_QUINTTAP  0x148  /* Five fingers on trackpad */
 #endif
 
 static inline Bool TestBit(int, unsigned long*);
@@ -111,9 +111,25 @@ int
 Event_Get_T5R2(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
-    return TestBit(INPUT_PROP_SYNAPTICS_T5R2, cmt->prop_bitmask);
+    EventStatePtr evstate = &cmt->evstate;
+    return (Event_Get_Touch_Count(info) > evstate->slot_count);
 }
 
+int
+Event_Get_Touch_Count(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+
+    if (TestBit(BTN_TOOL_QUINTTAP, cmt->key_bitmask))
+        return 5;
+    if (TestBit(BTN_TOOL_QUADTAP, cmt->key_bitmask))
+        return 4;
+    if (TestBit(BTN_TOOL_TRIPLETAP, cmt->key_bitmask))
+        return 3;
+    if (TestBit(BTN_TOOL_DOUBLETAP, cmt->key_bitmask))
+        return 2;
+    return 1;
+}
 
 /**
  * Probe Device Input Event Support
@@ -333,6 +349,7 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
         CASE_DBG(info, ev, BTN_TOOL_DOUBLETAP);
         CASE_DBG(info, ev, BTN_TOOL_TRIPLETAP);
         CASE_DBG(info, ev, BTN_TOOL_QUADTAP);
+        CASE_DBG(info, ev, BTN_TOOL_QUINTTAP);
         default:
             DBG(info, "@ %ld.%06ld KEY[%d] = %d\n",
                 ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
@@ -419,6 +436,30 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
         break;
     case BTN_MIDDLE:
         evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_MIDDLE, value);
+        break;
+    case BTN_TOUCH:
+        if (value == 0)
+            evstate->touch_cnt = 0;
+        break;
+    case BTN_TOOL_FINGER:
+        if (value)
+            evstate->touch_cnt = 1;
+        break;
+    case BTN_TOOL_DOUBLETAP:
+        if (value)
+            evstate->touch_cnt = 2;
+        break;
+    case BTN_TOOL_TRIPLETAP:
+        if (value)
+            evstate->touch_cnt = 3;
+        break;
+    case BTN_TOOL_QUADTAP:
+        if (value)
+            evstate->touch_cnt = 4;
+        break;
+    case BTN_TOOL_QUINTTAP:
+        if (value)
+            evstate->touch_cnt = 5;
         break;
     }
 }

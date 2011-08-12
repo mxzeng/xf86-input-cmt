@@ -91,21 +91,21 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     hwprops.screen_x_dpi    = 133;
     hwprops.screen_y_dpi    = 133;
     hwprops.max_finger_cnt  = evstate->slot_count;
-    hwprops.supports_t5r2   = Event_Get_T5R2(info);;
+    hwprops.max_touch_cnt   = Event_Get_Touch_Count(info);
+    hwprops.supports_t5r2   = Event_Get_T5R2(info);
     hwprops.support_semi_mt = Event_Get_Semi_MT(info);
     /* buttonpad means a physical button under the touch surface */
     hwprops.is_button_pad   = Event_Get_Button_Pad(info);
 
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
-
-    GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider, dev);
+    GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
+                                      rec->dev);
 }
 
 void
 Gesture_Device_On(GesturePtr rec)
 {
-    GestureInterpreterSetCallback(rec->interpreter,
-                                  &Gesture_Gesture_Ready,
+    GestureInterpreterSetCallback(rec->interpreter, &Gesture_Gesture_Ready,
                                   rec->dev);
 }
 
@@ -146,6 +146,7 @@ Gesture_Process_Slots(GesturePtr rec,
         StimeFromTimeval(tv),
         MT_XButtons_To_Gestures_Buttons(evstate->buttons),
         0,
+        evstate->touch_cnt,
         fingers
     };
     int current_finger;

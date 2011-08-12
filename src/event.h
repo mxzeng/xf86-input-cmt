@@ -27,6 +27,7 @@ typedef struct {
     struct input_absinfo* mt_axes[_ABS_MT_CNT];
 
     unsigned buttons;
+    unsigned touch_cnt;
 } EventStateRec, *EventStatePtr;
 
 int Event_Init(InputInfoPtr);
@@ -42,6 +43,7 @@ int Event_Get_Res_X(InputInfoPtr);
 int Event_Get_Button_Pad(InputInfoPtr);
 int Event_Get_Semi_MT(InputInfoPtr);
 int Event_Get_T5R2(InputInfoPtr);
+int Event_Get_Touch_Count(InputInfoPtr);
 
 /* Some useful bit twiddling routines */
 static inline unsigned
