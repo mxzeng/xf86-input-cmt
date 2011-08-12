@@ -21,6 +21,7 @@
 static inline Bool TestBit(int, unsigned long*);
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
+static void Event_Print(InputInfoPtr, struct input_event*);
 
 static void Event_Syn(InputInfoPtr, struct input_event*);
 static void Event_Syn_Report(InputInfoPtr, struct input_event*);
@@ -29,7 +30,6 @@ static void Event_Syn_MT_Report(InputInfoPtr, struct input_event*);
 static void Event_Key(InputInfoPtr, struct input_event*);
 
 static void Event_Abs(InputInfoPtr, struct input_event*);
-static void Event_Abs_MT_Slot(InputInfoPtr, struct input_event*);
 static void Event_Abs_MT(InputInfoPtr, struct input_event*);
 
 
@@ -248,6 +248,15 @@ Event_Init(InputInfoPtr info)
     return Success;
 }
 
+void
+Event_Free(InputInfoPtr info)
+{
+    MT_Free(info);
+}
+
+/**
+ * Debug Print Helper Functions
+ */
 static void
 Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
 {
@@ -259,11 +268,83 @@ Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
         PROBE_DBG(info, "    res = %d\n", absinfo->resolution);
 }
 
-void
-Event_Free(InputInfoPtr info)
+#define CASE_DBG(i, ev, x) \
+    case x: \
+        DBG(i, "@ %ld.%06ld %s = %d\n", \
+            ev->time.tv_sec, ev->time.tv_usec, #x, ev->value); \
+        break
+
+static void
+Event_Print(InputInfoPtr info, struct input_event* ev)
 {
-    MT_Free(info);
+    switch (ev->type) {
+    case EV_SYN:
+        switch (ev->code) {
+        case SYN_REPORT:
+            DBG(info, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
+                ev->time.tv_sec, ev->time.tv_usec);
+            break;
+        case SYN_MT_REPORT:
+            DBG(info, "@ %ld.%06ld  ........ SYN_MT_REPORT ......\n",
+                ev->time.tv_sec, ev->time.tv_usec);
+            break;
+        default:
+            DBG(info, "@ %ld.%06ld  ????????? SYN_UNKNOWN ???????\n",
+                ev->time.tv_sec, ev->time.tv_usec);
+            break;
+        }
+        break;
+    case EV_ABS:
+        switch (ev->code) {
+        CASE_DBG(info, ev, ABS_X);
+        CASE_DBG(info, ev, ABS_Y);
+        CASE_DBG(info, ev, ABS_Z);
+        CASE_DBG(info, ev, ABS_PRESSURE);
+        CASE_DBG(info, ev, ABS_TOOL_WIDTH);
+        CASE_DBG(info, ev, ABS_MT_TOUCH_MAJOR);
+        CASE_DBG(info, ev, ABS_MT_TOUCH_MINOR);
+        CASE_DBG(info, ev, ABS_MT_WIDTH_MAJOR);
+        CASE_DBG(info, ev, ABS_MT_WIDTH_MINOR);
+        CASE_DBG(info, ev, ABS_MT_ORIENTATION);
+        CASE_DBG(info, ev, ABS_MT_POSITION_X);
+        CASE_DBG(info, ev, ABS_MT_POSITION_Y);
+        CASE_DBG(info, ev, ABS_MT_TOOL_TYPE);
+        CASE_DBG(info, ev, ABS_MT_BLOB_ID);
+        CASE_DBG(info, ev, ABS_MT_TRACKING_ID);
+        CASE_DBG(info, ev, ABS_MT_PRESSURE);
+        case ABS_MT_SLOT:
+            DBG(info, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
+                ev->time.tv_sec, ev->time.tv_usec, ev->value);
+            break;
+        default:
+            DBG(info, "@ %ld.%06ld ABS[%d] = %d\n",
+                ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+            break;
+
+        }
+        break;
+    case EV_KEY:
+        switch (ev->code) {
+        CASE_DBG(info, ev, BTN_LEFT);
+        CASE_DBG(info, ev, BTN_RIGHT);
+        CASE_DBG(info, ev, BTN_MIDDLE);
+        CASE_DBG(info, ev, BTN_TOUCH);
+        CASE_DBG(info, ev, BTN_TOOL_FINGER);
+        CASE_DBG(info, ev, BTN_TOOL_DOUBLETAP);
+        CASE_DBG(info, ev, BTN_TOOL_TRIPLETAP);
+        CASE_DBG(info, ev, BTN_TOOL_QUADTAP);
+        default:
+            DBG(info, "@ %ld.%06ld KEY[%d] = %d\n",
+                ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+        }
+        break;
+    default:
+        DBG(info, "@ %ld.%06ld %u[%u] = %d\n", ev->time.tv_sec,
+            ev->time.tv_usec, ev->type, ev->code, ev->value);
+        break;
+    }
 }
+#undef CASE_DBG
 
 /**
  * Process Input Events
@@ -271,6 +352,8 @@ Event_Free(InputInfoPtr info)
 void
 Event_Process(InputInfoPtr info, struct input_event* ev)
 {
+    Event_Print(info, ev);
+
     switch (ev->type) {
     case EV_SYN:
         Event_Syn(info, ev);
@@ -285,8 +368,7 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
         break;
 
     default:
-        DBG(info, "@ %ld.%06ld %u[%u] = %d\n", ev->time.tv_sec,
-            ev->time.tv_usec, ev->type, ev->code, ev->value);
+        break;
     }
 }
 
@@ -310,17 +392,15 @@ Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
     CmtDevicePtr cmt = info->private;
     GesturePtr gesture = &cmt->gesture;
     EventStatePtr evstate = &cmt->evstate;
+
     Gesture_Process_Slots(gesture, evstate, &ev->time);
     MT_Print_Slots(info);
-    DBG(info, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
-        ev->time.tv_sec, ev->time.tv_usec);
 }
 
 static void
 Event_Syn_MT_Report(InputInfoPtr info, struct input_event* ev)
 {
-    DBG(info, "@ %ld.%06ld  ........ MT_SYN_REPORT .......\n",
-        ev->time.tv_sec, ev->time.tv_usec);
+    /* TODO(djkurtz): Handle MT-A */
 }
 
 static void
@@ -329,9 +409,6 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
     unsigned value = ev->value;
-
-    DBG(info, "@ %ld.%06ld  KEY [%d] = %d\n",
-        ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
 
     switch (ev->code) {
     case BTN_LEFT:
@@ -349,23 +426,10 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
 static void
 Event_Abs(InputInfoPtr info, struct input_event* ev)
 {
-    if (ev->code == ABS_MT_SLOT) {
-        Event_Abs_MT_Slot(info, ev);
-    } else if (IS_ABS_MT(ev->code)) {
+    if (ev->code == ABS_MT_SLOT)
+        MT_Slot_Set(info, ev->value);
+    else if (IS_ABS_MT(ev->code))
         Event_Abs_MT(info, ev);
-    } else {
-        DBG(info, "@ %ld.%06ld  ABS [%d] = %d\n",
-            ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
-    }
-}
-
-static void
-Event_Abs_MT_Slot(InputInfoPtr info, struct input_event* ev)
-{
-    DBG(info, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
-        ev->time.tv_sec, ev->time.tv_usec, ev->value);
-
-    MT_Slot_Set(info, ev->value);
 }
 
 static void
@@ -375,9 +439,6 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     EventStatePtr evstate = &cmt->evstate;
     struct input_absinfo* axis = evstate->mt_axes[MT_CODE(ev->code)];
     MtSlotPtr slot = evstate->slot_current;
-
-    DBG(info, "@ %ld.%06ld  ABS_MT[%02x] = %d\n",
-        ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
 
     if (axis == NULL) {
         xf86IDrvMsg(info, X_ERROR,
