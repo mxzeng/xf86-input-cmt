@@ -36,4 +36,8 @@
 #define CMT_PROP_RES_Y       "Vertical Resolution"
 #define CMT_PROP_RES_X       "Horizontal Resolution"
 
+/* Bool */
+#define CMT_PROP_SCROLL_BTN  "Scroll Buttons"
+#define CMT_PROP_SCROLL_AXES "Scroll Axes"
+
 #endif

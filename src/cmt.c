@@ -29,8 +29,9 @@
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
 
-/* Number of buttons to define on X Input device. */
+/* Number of buttons and axes to define on X Input device. */
 #define CMT_NUM_BUTTONS     7
+#define CMT_NUM_AXES        4
 
 /**
  * Forward declarations
@@ -368,10 +369,12 @@ InitializeXDevice(DeviceIntPtr dev)
     CARD8 map[CMT_NUM_BUTTONS];
     int i;
     Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
-    Atom axes_labels[2] = { 0 };
+    Atom axes_labels[CMT_NUM_AXES] = { 0 };
 
     axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
     axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
+    axes_labels[2] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_WHEEL);
+    axes_labels[3] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HWHEEL);
 
     btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
     btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
@@ -386,16 +389,13 @@ InitializeXDevice(DeviceIntPtr dev)
         map[i] = i;
 
     InitPointerDeviceStruct((DevicePtr)dev, map, CMT_NUM_BUTTONS, btn_labels,
-                            PointerCtrl, GetMotionHistorySize(), 2,
+                            PointerCtrl, GetMotionHistorySize(), CMT_NUM_AXES,
                             axes_labels);
 
-    /* X Valuator */
-    xf86InitValuatorAxisStruct(dev, 0, axes_labels[0], -1, -1, 1, 0, 1);
-    xf86InitValuatorDefaults(dev, 0);
-
-    /* Y Valuator */
-    xf86InitValuatorAxisStruct(dev, 1, axes_labels[1], -1, -1, 1, 0, 1);
-    xf86InitValuatorDefaults(dev, 1);
+    for (i=0; i < CMT_NUM_AXES; i++) {
+        xf86InitValuatorAxisStruct(dev, i, axes_labels[i], -1, -1, 1, 0, 1);
+        xf86InitValuatorDefaults(dev, i);
+    }
 
     return Success;
 }

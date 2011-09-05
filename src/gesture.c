@@ -185,6 +185,8 @@ static void Gesture_Gesture_Ready(void* client_data,
     const int kScrollBtnRight = 7;
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    CmtPropertiesPtr props = &cmt->props;
     int hscroll, vscroll;
 
     switch (gesture->type) {
@@ -201,16 +203,19 @@ static void Gesture_Gesture_Ready(void* client_data,
             hscroll = (int)gesture->details.scroll.dx;
             vscroll = (int)gesture->details.scroll.dy;
             DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
-            for (int type = 0; type < 2; type++) {
-                int button = 0;
-                int magnitude = 0;
-                if (type == 0) {  /* hscroll */
-                    magnitude = abs(hscroll);
-                    button = hscroll < 0 ? kScrollBtnLeft : kScrollBtnRight;
-                } else {  /* vscroll */
-                    magnitude = abs(vscroll);
-                    button = vscroll < 0 ? kScrollBtnUp : kScrollBtnDown;
+            if (props->scroll_axes)
+                xf86PostMotionEvent(dev, 0, 2, 2, vscroll, hscroll);
+            if (props->scroll_btns) {
+                int button;
+                int magnitude;
+                button = hscroll < 0 ? kScrollBtnLeft : kScrollBtnRight;
+                magnitude = hscroll < 0 ? -hscroll : hscroll;
+                for (int i = 0; i < magnitude; i++) {
+                    xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
+                    xf86PostButtonEvent(dev, 0, button, 0, 0, 0);
                 }
+                button = vscroll < 0 ? kScrollBtnUp : kScrollBtnDown;
+                magnitude = vscroll < 0 ? -vscroll : vscroll;
                 for (int i = 0; i < magnitude; i++) {
                     xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
                     xf86PostButtonEvent(dev, 0, button, 0, 0, 0);

@@ -136,6 +136,9 @@ PropertiesInit(DeviceIntPtr dev)
     PropCreate_Int(dev, CMT_PROP_RES_Y, &props->res_y, Event_Get_Res_Y(info));
     PropCreate_Int(dev, CMT_PROP_RES_X, &props->res_x, Event_Get_Res_X(info));
 
+    PropCreate_Bool(dev, CMT_PROP_SCROLL_BTN, &props->scroll_btns, TRUE);
+    PropCreate_Bool(dev, CMT_PROP_SCROLL_AXES, &props->scroll_axes, FALSE);
+
     return Success;
 }
 
