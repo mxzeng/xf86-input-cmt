@@ -38,6 +38,9 @@ struct GesturesProp {
         const char** s;
         double* r;
     } val;
+    void* handler_data;
+    GesturesPropGetHandler get;
+    GesturesPropSetHandler set;
 };
 
 /* XIProperty callbacks */
@@ -51,20 +54,10 @@ static void PropList_Insert(DeviceIntPtr, GesturesProp*);
 static void PropList_Remove(DeviceIntPtr, GesturesProp*);
 static void PropList_Free(DeviceIntPtr);
 
-/* Common Property Creation function */
+/* Property helper functions */
+static int PropChange(DeviceIntPtr, Atom, PropType, void*);
 static GesturesProp* PropCreate(DeviceIntPtr, const char*, PropType, void*,
                                 void*);
-
-/* Typed Property Creation functions */
-static GesturesProp* PropCreate_Int(void*, const char*, int*, const int);
-static GesturesProp* PropCreate_Short(void*, const char*, short*, const short);
-static GesturesProp* PropCreate_Bool(void*, const char*, GesturesPropBool*,
-                                     const GesturesPropBool);
-static GesturesProp* PropCreate_String(void*, const char*, const char**,
-                                       const char*);
-static GesturesProp* PropCreate_Real(void*, const char*, double*, const double);
-
-static void Prop_Free(void*, GesturesProp*);
 
 /* Typed PropertySet Callback Handlers */
 static int PropSet_Int(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
@@ -73,6 +66,18 @@ static int PropSet_Bool(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
 static int PropSet_String(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr,BOOL);
 static int PropSet_Real(DeviceIntPtr, GesturesProp*, XIPropertyValuePtr, BOOL);
 
+/* Property Provider implementation */
+static GesturesProp* PropCreate_Int(void*, const char*, int*, const int);
+static GesturesProp* PropCreate_Short(void*, const char*, short*, const short);
+static GesturesProp* PropCreate_Bool(void*, const char*, GesturesPropBool*,
+                                     const GesturesPropBool);
+static GesturesProp* PropCreate_String(void*, const char*, const char**,
+                                       const char*);
+static GesturesProp* PropCreate_Real(void*, const char*, double*, const double);
+static void Prop_RegisterHandlers(void*, GesturesProp*, void*,
+                                  GesturesPropGetHandler,
+                                  GesturesPropSetHandler);
+static void Prop_Free(void*, GesturesProp*);
 
 
 /**
@@ -84,6 +89,7 @@ GesturesPropProvider prop_provider = {
     PropCreate_Bool,
     PropCreate_String,
     PropCreate_Real,
+    Prop_RegisterHandlers,
     Prop_Free
 };
 
@@ -244,6 +250,7 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
             BOOL checkonly)
 {
     GesturesProp* prop;
+    int rc;
 
     prop = PropList_Find(dev, atom);
     if (!prop)
@@ -254,23 +261,44 @@ PropertySet(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
 
     switch (prop->type) {
     case PropTypeInt:
-        return PropSet_Int(dev, prop, val, checkonly);
+        rc = PropSet_Int(dev, prop, val, checkonly);
+        break;
     case PropTypeShort:
-        return PropSet_Short(dev, prop, val, checkonly);
+        rc = PropSet_Short(dev, prop, val, checkonly);
+        break;
     case PropTypeBool:
-        return PropSet_Bool(dev, prop, val, checkonly);
+        rc = PropSet_Bool(dev, prop, val, checkonly);
+        break;
     case PropTypeString:
-        return PropSet_String(dev, prop, val, checkonly);
+        rc = PropSet_String(dev, prop, val, checkonly);
+        break;
     case PropTypeReal:
-        return PropSet_Real(dev, prop, val, checkonly);
+        rc = PropSet_Real(dev, prop, val, checkonly);
+        break;
     default:
-        return BadMatch; /* Unknown property type */
+        rc = BadMatch; /* Unknown property type */
+        break;
     }
+
+    if (!checkonly && rc == Success && prop->set)
+        prop->set(prop->handler_data);
+
+    return rc;
 }
 
 static int
 PropertyGet(DeviceIntPtr dev, Atom property)
 {
+    GesturesProp* prop;
+
+    prop = PropList_Find(dev, property);
+    if (!prop)
+        return Success; /* Unknown or uninitialized Property */
+
+    // If get handler returns true, update the property value in the server.
+    if (prop->get && prop->get(prop->handler_data))
+        PropChange(dev, prop->atom, prop->type, prop->val.v);
+
     return Success;
 }
 
@@ -354,25 +382,11 @@ Prop_Free(void* priv, GesturesProp* prop)
     free(prop);
 }
 
-/**
- * Device Property Creators
- */
-static GesturesProp*
-PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
-           void* init)
+static int PropChange(DeviceIntPtr dev, Atom atom, PropType type, void* val)
 {
-    InputInfoPtr info = dev->public.devicePrivate;
-    GesturesProp* prop;
-    Atom atom;
     Atom type_atom;
     int size;
     int format;
-
-    DBG(info, "Creating Property: \"%s\"\n", name);
-
-    atom = MakeAtom(name, strlen(name), TRUE);
-    if (atom == BAD_RESOURCE)
-        return NULL;
 
     switch (type) {
     case PropTypeInt:
@@ -392,7 +406,7 @@ PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
         break;
     case PropTypeString:
         type_atom = XA_STRING;
-        size = strlen((const char*)init);
+        size = strlen((const char*)val);
         format = 8;
         break;
     case PropTypeReal:
@@ -404,8 +418,28 @@ PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
         return NULL;
     }
 
-    if (XIChangeDeviceProperty(dev, atom, type_atom, format, PropModeReplace,
-                               size, init, FALSE) != Success)
+    return XIChangeDeviceProperty(dev, atom, type_atom, format,
+                                  PropModeReplace, size, val, FALSE);
+}
+
+/**
+ * Device Property Creators
+ */
+static GesturesProp*
+PropCreate(DeviceIntPtr dev, const char* name, PropType type, void* val,
+           void* init)
+{
+    InputInfoPtr info = dev->public.devicePrivate;
+    GesturesProp* prop;
+    Atom atom;
+
+    DBG(info, "Creating Property: \"%s\"\n", name);
+
+    atom = MakeAtom(name, strlen(name), TRUE);
+    if (atom == BAD_RESOURCE)
+        return NULL;
+
+    if (PropChange(dev, atom, type, init) != Success)
         return NULL;
 
     XISetDevicePropertyDeletable(dev, atom, FALSE);
@@ -503,4 +537,18 @@ PropCreate_Real(void* priv, const char* name, double* val, const double init)
     cval = (float)cfg;
 
     return PropCreate(dev, name, PropTypeReal, val, &cval);
+}
+
+static void Prop_RegisterHandlers(void* priv, GesturesProp* prop,
+                                  void* handler_data,
+                                  GesturesPropGetHandler get,
+                                  GesturesPropSetHandler set)
+{
+    // Sanity checks
+    if (!priv || !prop)
+        return;
+
+    prop->handler_data = handler_data;
+    prop->get = get;
+    prop->set = set;
 }
