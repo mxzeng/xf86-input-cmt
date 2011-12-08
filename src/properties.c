@@ -415,7 +415,7 @@ static int PropChange(DeviceIntPtr dev, Atom atom, PropType type, void* val)
         format = 32;
         break;
     default: /* Unknown type */
-        return NULL;
+        return BadMatch;
     }
 
     return XIChangeDeviceProperty(dev, atom, type_atom, format,
