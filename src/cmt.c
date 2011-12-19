@@ -366,7 +366,7 @@ PointerCtrl(DeviceIntPtr device, PtrCtrl *ctrl)
 static int
 InitializeXDevice(DeviceIntPtr dev)
 {
-    CARD8 map[CMT_NUM_BUTTONS];
+    CARD8 map[CMT_NUM_BUTTONS + 1];
     int i;
     Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
     Atom axes_labels[CMT_NUM_AXES] = { 0 };
@@ -385,7 +385,8 @@ InitializeXDevice(DeviceIntPtr dev)
     btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
 
     /* TODO: Prop to adjust button mapping */
-    for (i = 0; i < CMT_NUM_BUTTONS; i++)
+    /* Note: Must initialize entire (CMT_NUM_BUTTONS + 1)-length map */
+    for (i = 0; i <= CMT_NUM_BUTTONS; i++)
         map[i] = i;
 
     InitPointerDeviceStruct((DevicePtr)dev, map, CMT_NUM_BUTTONS, btn_labels,
