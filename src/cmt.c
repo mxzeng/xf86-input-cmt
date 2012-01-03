@@ -133,31 +133,33 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 
     rc = OpenDevice(info);
     if (rc != Success)
-        goto PreInit_error;
+        goto Error_OpenDevice;
 
     rc = Event_Init(info);
     if (rc != Success)
-        goto PreInit_error;
+        goto Error_Event_Init;
 
     xf86ProcessCommonOptions(info, info->options);
 
-    if (info->fd != -1) {
+    if (info->fd >= 0) {
         close(info->fd);
         info->fd = -1;
     }
 
     rc = Gesture_Init(&cmt->gesture);
     if (rc != Success)
-        goto PreInit_error;
+        goto Error_Gesture_Init;
 
     return Success;
 
-PreInit_error:
-    Gesture_Free(&cmt->gesture);
-    if (info->fd >= 0)
-        close(info->fd);
-    info->fd = -1;
+Error_Gesture_Init:
     Event_Free(info);
+Error_Event_Init:
+    if (info->fd >= 0) {
+        close(info->fd);
+        info->fd = -1;
+    }
+Error_OpenDevice:
     return rc;
 }
 

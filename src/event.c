@@ -239,7 +239,11 @@ Event_Init(InputInfoPtr info)
             if (len < 0) {
                 xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGABS(%d) failed: %s\n",
                             i, strerror(errno));
-                return !Success;
+                /*
+                 * Clean up in case where error happens after MTB_Init() has
+                 * already allocated slots.
+                 */
+                goto error_MT_Free;
             }
 
             Absinfo_Print(info, absinfo);
@@ -262,6 +266,10 @@ Event_Init(InputInfoPtr info)
      */
 
     return Success;
+
+error_MT_Free:
+    MT_Free(info);
+    return !Success;
 }
 
 void
