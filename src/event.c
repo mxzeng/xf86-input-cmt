@@ -39,7 +39,7 @@ static void Event_Abs_MT(InputInfoPtr, struct input_event*);
 static inline Bool
 TestBit(int bit, unsigned long* array)
 {
-    return array[bit / LONG_BITS] & (1L << (bit % LONG_BITS));
+    return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
 }
 
 /**
