@@ -10,6 +10,8 @@
 #include <linux/input.h>
 
 #include <gestures/gestures.h>
+
+#include <xorg-server.h>
 #include <xf86.h>
 
 #include "event.h"

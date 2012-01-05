@@ -9,8 +9,6 @@
 #include <errno.h>
 #include <linux/input.h>
 
-#include <xf86Xinput.h>
-
 #include "cmt.h"
 #include "mt.h"
 

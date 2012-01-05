@@ -8,8 +8,6 @@
 
 #include <linux/input.h>
 
-#include <xf86Xinput.h>
-
 #include "cmt.h"
 
 const char *mt_axis_names[] = {

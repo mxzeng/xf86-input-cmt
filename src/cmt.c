@@ -17,10 +17,8 @@
 #include <exevents.h>
 #include <X11/extensions/XI.h>
 #include <X11/Xatom.h>
-#include <xf86.h>
 #include <xf86Xinput.h>
 #include <xf86_OSproc.h>
-#include <xorg-server.h>
 #include <xserver-properties.h>
 
 #include "event.h"

@@ -10,9 +10,6 @@
 #include <inputstr.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/XI.h>
-#include <xf86.h>
-#include <xf86Xinput.h>
-#include <xorg-server.h>
 #include <xserver-properties.h>
 
 #include "cmt.h"
