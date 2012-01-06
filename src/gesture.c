@@ -184,8 +184,8 @@ static void Gesture_Gesture_Ready(void* client_data,
     const int kScrollBtnLeft  = 6;
     const int kScrollBtnRight = 7;
 
-    // Assume that each scroll increment will scroll by 3 pixels
-    // when using buttons instead of axes.
+    /* Assume that each scroll increment will scroll by 3 pixels
+       when using buttons instead of axes. */
     const int kPixelsPerBtn = 3;
 
     DeviceIntPtr dev = client_data;
@@ -193,23 +193,55 @@ static void Gesture_Gesture_Ready(void* client_data,
     CmtDevicePtr cmt = info->private;
     CmtPropertiesPtr props = &cmt->props;
     int hscroll, vscroll;
+    unsigned int start, end;
+
+    start = (unsigned long long)(1000.0L * gesture->start_time) & 0x0FFFFFFFFLL;
+    end = (unsigned long long)(1000.0L * gesture->end_time) & 0x0FFFFFFFFLL;
+    DBG(info, "Gesture Start: %f (%u) End: %f (%u)\n",
+        gesture->start_time, start, gesture->end_time, end);
 
     switch (gesture->type) {
         case kGestureTypeContactInitiated:
             /* TODO(adlr): handle contact initiated */
             break;
-        case kGestureTypeMove:
+        case kGestureTypeMove: {
+            static int last_times_valid = 0;
+            static int last_start = 0, last_end = 0;
+
+            unsigned int rel_start, rel_end;
             DBG(info, "Gesture Move: (%d, %d)\n",
                 (int)gesture->details.move.dx, (int)gesture->details.move.dy);
-            xf86PostMotionEvent(dev, 0, 0, 2,
-                (int)gesture->details.move.dx, (int)gesture->details.move.dy);
+
+            /* We send the movement axes as relative values, which causes the
+               times to be sent as relative values too. This code computes the
+               right relative values.
+
+               NOTE: even though we send different absolute values for these
+               same axes in other events, it appears that XI only uses the
+               last relative value when computing the new relative values it
+               sends to clients */
+            if (last_times_valid) {
+                rel_start = start - last_start;
+                rel_end = end - last_end;
+            } else {
+                rel_start = start;
+                rel_end = end;
+            }
+            last_start = start;
+            last_end = end;
+            last_times_valid = 1;
+
+            xf86PostMotionEvent(dev, 0, 0, 4,
+                                (int)gesture->details.move.dx,
+                                (int)gesture->details.move.dy,
+                                rel_start, rel_end);
             break;
-        case kGestureTypeScroll:
+        } case kGestureTypeScroll:
             hscroll = (int)gesture->details.scroll.dx;
             vscroll = (int)gesture->details.scroll.dy;
-            DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
+            DBG(info, "Gesture Scroll: (%u, %u)\n", hscroll, vscroll);
             if (props->scroll_axes)
-                xf86PostMotionEvent(dev, 0, 2, 2, vscroll, hscroll);
+                xf86PostMotionEvent(dev, 1, 2, 4, start, end, vscroll, hscroll);
             if (props->scroll_btns) {
                 int button;
                 int magnitude;
@@ -217,15 +249,15 @@ static void Gesture_Gesture_Ready(void* client_data,
                 magnitude = hscroll < 0 ? -hscroll : hscroll;
                 magnitude = round((float)magnitude / kPixelsPerBtn);
                 for (int i = 0; i < magnitude; i++) {
-                    xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
-                    xf86PostButtonEvent(dev, 0, button, 0, 0, 0);
+                    xf86PostButtonEvent(dev, 0, button, 1, 4, 2, start, end);
+                    xf86PostButtonEvent(dev, 0, button, 0, 4, 2, start, end);
                 }
                 button = vscroll < 0 ? kScrollBtnUp : kScrollBtnDown;
                 magnitude = vscroll < 0 ? -vscroll : vscroll;
                 magnitude = round((float)magnitude / kPixelsPerBtn);
                 for (int i = 0; i < magnitude; i++) {
-                    xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
-                    xf86PostButtonEvent(dev, 0, button, 0, 0, 0);
+                    xf86PostButtonEvent(dev, 0, button, 1, 2, 2, start, end);
+                    xf86PostButtonEvent(dev, 0, button, 0, 2, 2, start, end);
                 }
             }
             break;
@@ -233,17 +265,17 @@ static void Gesture_Gesture_Ready(void* client_data,
             DBG(info, "Gesture Button Change: down=0x%02x up=0x%02x\n",
                 gesture->details.buttons.down, gesture->details.buttons.up);
             if (gesture->details.buttons.down & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEvent(dev, 0, 1, 1, 0, 0);
+                xf86PostButtonEvent(dev, 0, 1, 1, 2, 2, start, end);
             if (gesture->details.buttons.down & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEvent(dev, 0, 2, 1, 0, 0);
+                xf86PostButtonEvent(dev, 0, 2, 1, 2, 2, start, end);
             if (gesture->details.buttons.down & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEvent(dev, 0, 3, 1, 0, 0);
+                xf86PostButtonEvent(dev, 0, 3, 1, 2, 2, start, end);
             if (gesture->details.buttons.up & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEvent(dev, 0, 1, 0, 0, 0);
+                xf86PostButtonEvent(dev, 0, 1, 0, 2, 2, start, end);
             if (gesture->details.buttons.up & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEvent(dev, 0, 2, 0, 0, 0);
+                xf86PostButtonEvent(dev, 0, 2, 0, 2, 2, start, end);
             if (gesture->details.buttons.up & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEvent(dev, 0, 3, 0, 0, 0);
+                xf86PostButtonEvent(dev, 0, 3, 0, 2, 2, start, end);
             break;
     }
 }

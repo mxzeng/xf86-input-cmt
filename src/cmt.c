@@ -29,7 +29,14 @@
 
 /* Number of buttons and axes to define on X Input device. */
 #define CMT_NUM_BUTTONS     7
-#define CMT_NUM_AXES        4
+#define CMT_NUM_AXES        6
+
+#ifndef AXIS_LABEL_PROP_ABS_START_TIME
+#define AXIS_LABEL_PROP_ABS_START_TIME      "Abs Start Timestamp"
+#endif
+#ifndef AXIS_LABEL_PROP_ABS_END_TIME
+#define AXIS_LABEL_PROP_ABS_END_TIME      "Abs End Timestamp"
+#endif
 
 /**
  * Forward declarations
@@ -373,8 +380,18 @@ InitializeXDevice(DeviceIntPtr dev)
 
     axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
     axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
-    axes_labels[2] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_WHEEL);
-    axes_labels[3] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HWHEEL);
+    axes_labels[2] = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_START_TIME);
+    if (!axes_labels[2])
+        axes_labels[2] = MakeAtom(AXIS_LABEL_PROP_ABS_START_TIME,
+                                  strlen(AXIS_LABEL_PROP_ABS_START_TIME),
+                                  TRUE);
+    axes_labels[3] = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_END_TIME);
+    if (!axes_labels[3])
+        axes_labels[3] = MakeAtom(AXIS_LABEL_PROP_ABS_END_TIME,
+                                  strlen(AXIS_LABEL_PROP_ABS_END_TIME),
+                                  TRUE);
+    axes_labels[4] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_WHEEL);
+    axes_labels[5] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HWHEEL);
 
     btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
     btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
