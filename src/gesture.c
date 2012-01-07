@@ -183,6 +183,11 @@ static void Gesture_Gesture_Ready(void* client_data,
     const int kScrollBtnDown  = 5;
     const int kScrollBtnLeft  = 6;
     const int kScrollBtnRight = 7;
+
+    // Assume that each scroll increment will scroll by 3 pixels
+    // when using buttons instead of axes.
+    const int kPixelsPerBtn = 3;
+
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
@@ -210,12 +215,14 @@ static void Gesture_Gesture_Ready(void* client_data,
                 int magnitude;
                 button = hscroll < 0 ? kScrollBtnLeft : kScrollBtnRight;
                 magnitude = hscroll < 0 ? -hscroll : hscroll;
+                magnitude = round((float)magnitude / kPixelsPerBtn);
                 for (int i = 0; i < magnitude; i++) {
                     xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
                     xf86PostButtonEvent(dev, 0, button, 0, 0, 0);
                 }
                 button = vscroll < 0 ? kScrollBtnUp : kScrollBtnDown;
                 magnitude = vscroll < 0 ? -vscroll : vscroll;
+                magnitude = round((float)magnitude / kPixelsPerBtn);
                 for (int i = 0; i < magnitude; i++) {
                     xf86PostButtonEvent(dev, 0, button, 1, 0, 0);
                     xf86PostButtonEvent(dev, 0, button, 0, 0, 0);
