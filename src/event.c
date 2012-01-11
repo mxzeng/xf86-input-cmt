@@ -29,6 +29,7 @@ static void Event_Key(InputInfoPtr, struct input_event*);
 
 static void Event_Abs(InputInfoPtr, struct input_event*);
 static void Event_Abs_MT(InputInfoPtr, struct input_event*);
+static void SemiMtSetAbsPressure(InputInfoPtr, struct input_event*);
 
 
 /**
@@ -471,12 +472,33 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
 }
 
 static void
+SemiMtSetAbsPressure(InputInfoPtr info, struct input_event* ev)
+{
+    /*
+     * Update all active slots with the same ABS_PRESSURE value if it is a
+     * semi-mt device.
+     */
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+    int i;
+
+    for (i = 0; i < evstate->slot_count; i++) {
+        MtSlotPtr slot = &evstate->slots[i];
+        if (slot->tracking_id == -1)
+            continue;
+        slot->pressure = ev->value;
+    }
+}
+
+static void
 Event_Abs(InputInfoPtr info, struct input_event* ev)
 {
     if (ev->code == ABS_MT_SLOT)
         MT_Slot_Set(info, ev->value);
     else if (IS_ABS_MT(ev->code))
         Event_Abs_MT(info, ev);
+    else if ((ev->code == ABS_PRESSURE) && Event_Get_Semi_MT(info))
+        SemiMtSetAbsPressure(info, ev);
 }
 
 static void
@@ -510,4 +532,3 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
 
     MT_Slot_Value_Set(slot, ev->code, ev->value);
 }
-
