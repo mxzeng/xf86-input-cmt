@@ -8,12 +8,18 @@
 
 #include <errno.h>
 #include <linux/input.h>
+#include <time.h>
 
 #include "cmt.h"
 #include "mt.h"
 
 #ifndef BTN_TOOL_QUINTTAP
 #define BTN_TOOL_QUINTTAP  0x148  /* Five fingers on trackpad */
+#endif
+
+/* Set clockid to be used for timestamps */
+#ifndef EVIOCSCLOCKID
+#define EVIOCSCLOCKID  _IOW('E', 0xa0, int)
 #endif
 
 static inline Bool TestBit(int, unsigned long*);
@@ -129,6 +135,14 @@ Event_Get_Touch_Count(InputInfoPtr info)
         return 2;
     return 1;
 }
+
+static int
+Event_Enable_Monotonic(InputInfoPtr info)
+{
+    unsigned int clk = CLOCK_MONOTONIC;
+    return (ioctl(info->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
+}
+
 
 /**
  * Probe Device Input Event Support
@@ -275,6 +289,17 @@ void
 Event_Free(InputInfoPtr info)
 {
     MT_Free(info);
+}
+
+void
+Event_Open(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+
+    /* Select monotonic input event timestamps, if supported by kernel */
+    cmt->is_monotonic = (Event_Enable_Monotonic(info) == Success);
+    xf86IDrvMsg(info, X_PROBED, "Using %s input event time stamps\n",
+                cmt->is_monotonic ? "monotonic" : "realtime");
 }
 
 /**

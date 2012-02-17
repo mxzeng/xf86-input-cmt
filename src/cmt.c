@@ -283,6 +283,7 @@ DeviceOn(DeviceIntPtr dev)
     rc = OpenDevice(info);
     if (rc != Success)
         return rc;
+    Event_Open(info);
 
     xf86FlushInput(info->fd);
     xf86AddEnabledDevice(info);

@@ -7,6 +7,7 @@
 #include "gesture.h"
 
 #include <gestures/gestures.h>
+#include <time.h>
 #include <xorg/xf86_OSproc.h>
 
 #include "cmt.h"
@@ -31,7 +32,8 @@ static CARD32 Gesture_TimerCallback(OsTimerPtr, CARD32, pointer);
 struct GesturesTimer {
     OsTimerPtr timer;
     GesturesTimerCallback callback;
-    void* data;
+    void* callback_data;
+    int is_monotonic:1;
 };
 
 static GesturesTimerProvider Gesture_GesturesTimerProvider = {
@@ -53,17 +55,12 @@ Gesture_Init(GesturePtr rec)
     rec->interpreter = NewGestureInterpreter();
     if (!rec->interpreter)
         return !Success;
-    GestureInterpreterSetTimerProvider(rec->interpreter,
-                                       &Gesture_GesturesTimerProvider,
-                                       NULL);
-
     return Success;
 }
 
 void
 Gesture_Free(GesturePtr rec)
 {
-    GestureInterpreterSetTimerProvider(rec->interpreter, NULL, NULL);
     DeleteGestureInterpreter(rec->interpreter);
     rec->interpreter = NULL;
     rec->dev = NULL;
@@ -97,6 +94,10 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     /* buttonpad means a physical button under the touch surface */
     hwprops.is_button_pad   = Event_Get_Button_Pad(info);
 
+    GestureInterpreterSetTimerProvider(rec->interpreter,
+                                       &Gesture_GesturesTimerProvider,
+                                       rec->dev);
+
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
     GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
                                       rec->dev);
@@ -119,6 +120,7 @@ void
 Gesture_Device_Close(GesturePtr rec)
 {
     GestureInterpreterSetPropProvider(rec->interpreter, NULL, NULL);
+    GestureInterpreterSetTimerProvider(rec->interpreter, NULL, NULL);
 }
 
 static unsigned
@@ -281,45 +283,49 @@ static void Gesture_Gesture_Ready(void* client_data,
 }
 
 static GesturesTimer*
-Gesture_TimerCreate(void* unused)
+Gesture_TimerCreate(void* provider_data)
 {
-    GesturesTimer* ret = (GesturesTimer*)calloc(1, sizeof(GesturesTimer));
-    if (!ret)
+    DeviceIntPtr dev = provider_data;
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    GesturesTimer* timer = (GesturesTimer*)calloc(1, sizeof(GesturesTimer));
+    if (!timer)
         return NULL;
-    ret->timer = TimerSet(NULL, 0, 0, NULL, 0);
-    if (!ret->timer) {
-        free(ret);
+    timer->timer = TimerSet(NULL, 0, 0, NULL, 0);
+    if (!timer->timer) {
+        free(timer);
         return NULL;
     }
-    return ret;
+    timer->is_monotonic = cmt->is_monotonic;
+    return timer;
 }
 
 static void
-Gesture_TimerSet(void* unused,
+Gesture_TimerSet(void* provider_data,
                  GesturesTimer* timer,
                  stime_t delay,
                  GesturesTimerCallback callback,
-                 void* data)
+                 void* callback_data)
 {
     CARD32 ms = delay * 1000.0;
 
     if (!timer)
         return;
     timer->callback = callback;
-    timer->data = data;
+    timer->callback_data = callback_data;
     if (ms == 0)
         ms = 1;
     TimerSet(timer->timer, 0, ms, Gesture_TimerCallback, timer);
 }
 
 static void
-Gesture_TimerCancel(void* unused, GesturesTimer* timer)
+Gesture_TimerCancel(void* provider_data, GesturesTimer* timer)
 {
     TimerCancel(timer->timer);
 }
 
 static void
-Gesture_TimerFree(void* unused, GesturesTimer* timer)
+Gesture_TimerFree(void* provider_data, GesturesTimer* timer)
 {
     TimerFree(timer->timer);
     timer->timer = NULL;
@@ -329,18 +335,24 @@ Gesture_TimerFree(void* unused, GesturesTimer* timer)
 static CARD32
 Gesture_TimerCallback(OsTimerPtr timer,
                       CARD32 millis,
-                      pointer data)
+                      pointer callback_data)
 {
     int sigstate = xf86BlockSIGIO();
-    GesturesTimer* tm = (GesturesTimer*)data;
-    struct timeval tv;
+    GesturesTimer* tm = callback_data;
     stime_t now;
     stime_t rc;
 
-    gettimeofday(&tv, NULL);
-    now = StimeFromTimeval(&tv);
+    if (tm->is_monotonic) {
+      struct timespec ts;
+      clock_gettime(CLOCK_MONOTONIC, &ts);
+      now = StimeFromTimespec(&ts);
+    } else {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      now = StimeFromTimeval(&tv);
+    }
 
-    rc = tm->callback(now, tm->data);
+    rc = tm->callback(now, tm->callback_data);
     if (rc >= 0.0) {
         CARD32 ms = rc * 1000.0;
         if (ms == 0)

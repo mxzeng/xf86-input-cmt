@@ -33,6 +33,7 @@ typedef struct {
 
 int Event_Init(InputInfoPtr);
 void Event_Free(InputInfoPtr);
+void Event_Open(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
 
 int Event_Get_Left(InputInfoPtr);
