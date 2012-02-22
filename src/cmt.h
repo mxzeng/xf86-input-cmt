@@ -58,6 +58,14 @@ typedef struct {
     struct input_absinfo absinfo[ABS_CNT];
     unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
     int is_monotonic:1;
+
+    /*
+     * For relative mode devices, the timestamp on Motion Events is reported
+     * using a relative valuator.  To pass the absolute timestamp through the
+     * X server, we track the previous timestamp, and send a delta.
+     */
+    unsigned int last_start_time;
+    unsigned int last_end_time;
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif
