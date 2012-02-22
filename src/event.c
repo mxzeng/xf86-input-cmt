@@ -143,6 +143,85 @@ Event_Enable_Monotonic(InputInfoPtr info)
     return (ioctl(info->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
 }
 
+#define CASE_RETURN(s) \
+    case (s):\
+        return #s
+
+
+static const char *
+Event_To_String(int type, int code) {
+    switch (type) {
+    case EV_SYN:
+        switch (code) {
+        CASE_RETURN(SYN_REPORT);
+        CASE_RETURN(SYN_MT_REPORT);
+        default:
+            break;
+        }
+        break;
+    case EV_ABS:
+        switch (code) {
+        CASE_RETURN(ABS_X);
+        CASE_RETURN(ABS_Y);
+        CASE_RETURN(ABS_Z);
+        CASE_RETURN(ABS_PRESSURE);
+        CASE_RETURN(ABS_TOOL_WIDTH);
+        CASE_RETURN(ABS_MT_TOUCH_MAJOR);
+        CASE_RETURN(ABS_MT_TOUCH_MINOR);
+        CASE_RETURN(ABS_MT_WIDTH_MAJOR);
+        CASE_RETURN(ABS_MT_WIDTH_MINOR);
+        CASE_RETURN(ABS_MT_ORIENTATION);
+        CASE_RETURN(ABS_MT_POSITION_X);
+        CASE_RETURN(ABS_MT_POSITION_Y);
+        CASE_RETURN(ABS_MT_TOOL_TYPE);
+        CASE_RETURN(ABS_MT_BLOB_ID);
+        CASE_RETURN(ABS_MT_TRACKING_ID);
+        CASE_RETURN(ABS_MT_PRESSURE);
+        CASE_RETURN(ABS_MT_SLOT);
+        default:
+            break;
+        }
+        break;
+    case EV_KEY:
+        switch (code) {
+        CASE_RETURN(BTN_LEFT);
+        CASE_RETURN(BTN_RIGHT);
+        CASE_RETURN(BTN_MIDDLE);
+        CASE_RETURN(BTN_TOUCH);
+        CASE_RETURN(BTN_TOOL_FINGER);
+        CASE_RETURN(BTN_TOOL_DOUBLETAP);
+        CASE_RETURN(BTN_TOOL_TRIPLETAP);
+        CASE_RETURN(BTN_TOOL_QUADTAP);
+        CASE_RETURN(BTN_TOOL_QUINTTAP);
+        default:
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+    return "?";
+}
+#undef CASE_RETURN
+
+static const char *
+Event_Type_To_String(int type) {
+    switch (type) {
+    case EV_SYN: return "SYN";
+    case EV_KEY: return "KEY";
+    case EV_REL: return "REL";
+    case EV_ABS: return "ABS";
+    case EV_MSC: return "MSC";
+    case EV_SW: return "SW";
+    case EV_LED: return "LED";
+    case EV_SND: return "SND";
+    case EV_REP: return "REP";
+    case EV_FF: return "FF";
+    case EV_PWR: return "PWR";
+    default: return "?";
+    }
+}
+
 
 /**
  * Probe Device Input Event Support
@@ -190,7 +269,8 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->bitmask))
-            PROBE_DBG(info, "Has Event %d\n", i);
+            PROBE_DBG(info, "Has Event Type %d = %s\n", i,
+                      Event_Type_To_String(i));
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_KEY, sizeof(cmt->key_bitmask)),
@@ -202,7 +282,8 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->key_bitmask))
-            PROBE_DBG(info, "Has KEY %d\n", i);
+            PROBE_DBG(info, "Has KEY[%d] = %s\n", i,
+                      Event_To_String(EV_KEY, i));
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_LED, sizeof(cmt->led_bitmask)),
@@ -214,7 +295,8 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->led_bitmask))
-            PROBE_DBG(info, "Has LED %d\n", i);
+            PROBE_DBG(info, "Has LED[%d] = %s\n", i,
+                      Event_To_String(EV_LED, i));
     }
 
     len = ioctl(info->fd, EVIOCGBIT(EV_REL, sizeof(cmt->rel_bitmask)),
@@ -226,7 +308,8 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->rel_bitmask))
-            PROBE_DBG(info, "Has REL %d\n", i);
+            PROBE_DBG(info, "Has REL[%d] = %s\n", i,
+                      Event_To_String(EV_REL, i));
     }
 
     /*
@@ -247,7 +330,8 @@ Event_Init(InputInfoPtr info)
     for (i = ABS_X; i <= ABS_MAX; i++) {
         if (TestBit(i, cmt->abs_bitmask)) {
             struct input_absinfo* absinfo = &cmt->absinfo[i];
-            PROBE_DBG(info, "Has ABS axis %d\n", i);
+            PROBE_DBG(info, "Has ABS[%d] = %s\n", i,
+                      Event_To_String(EV_ABS, i));
             len = ioctl(info->fd, EVIOCGABS(i), absinfo);
             if (len < 0) {
                 xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGABS(%d) failed: %s\n",
@@ -316,12 +400,6 @@ Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
         PROBE_DBG(info, "    res = %d\n", absinfo->resolution);
 }
 
-#define CASE_DBG(i, ev, x) \
-    case x: \
-        DBG(i, "@ %ld.%06ld %s = %d\n", \
-            ev->time.tv_sec, ev->time.tv_usec, #x, ev->value); \
-        break
-
 static void
 Event_Print(InputInfoPtr info, struct input_event* ev)
 {
@@ -331,69 +409,32 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
         case SYN_REPORT:
             DBG(info, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
                 ev->time.tv_sec, ev->time.tv_usec);
-            break;
+            return;
         case SYN_MT_REPORT:
             DBG(info, "@ %ld.%06ld  ........ SYN_MT_REPORT ......\n",
                 ev->time.tv_sec, ev->time.tv_usec);
-            break;
+            return;
         default:
             DBG(info, "@ %ld.%06ld  ????????? SYN_UNKNOWN ???????\n",
                 ev->time.tv_sec, ev->time.tv_usec);
-            break;
+            return;
         }
         break;
     case EV_ABS:
-        switch (ev->code) {
-        CASE_DBG(info, ev, ABS_X);
-        CASE_DBG(info, ev, ABS_Y);
-        CASE_DBG(info, ev, ABS_Z);
-        CASE_DBG(info, ev, ABS_PRESSURE);
-        CASE_DBG(info, ev, ABS_TOOL_WIDTH);
-        CASE_DBG(info, ev, ABS_MT_TOUCH_MAJOR);
-        CASE_DBG(info, ev, ABS_MT_TOUCH_MINOR);
-        CASE_DBG(info, ev, ABS_MT_WIDTH_MAJOR);
-        CASE_DBG(info, ev, ABS_MT_WIDTH_MINOR);
-        CASE_DBG(info, ev, ABS_MT_ORIENTATION);
-        CASE_DBG(info, ev, ABS_MT_POSITION_X);
-        CASE_DBG(info, ev, ABS_MT_POSITION_Y);
-        CASE_DBG(info, ev, ABS_MT_TOOL_TYPE);
-        CASE_DBG(info, ev, ABS_MT_BLOB_ID);
-        CASE_DBG(info, ev, ABS_MT_TRACKING_ID);
-        CASE_DBG(info, ev, ABS_MT_PRESSURE);
-        case ABS_MT_SLOT:
+        if (ev->code == ABS_MT_SLOT) {
             DBG(info, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
                 ev->time.tv_sec, ev->time.tv_usec, ev->value);
-            break;
-        default:
-            DBG(info, "@ %ld.%06ld ABS[%d] = %d\n",
-                ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
-            break;
-
-        }
-        break;
-    case EV_KEY:
-        switch (ev->code) {
-        CASE_DBG(info, ev, BTN_LEFT);
-        CASE_DBG(info, ev, BTN_RIGHT);
-        CASE_DBG(info, ev, BTN_MIDDLE);
-        CASE_DBG(info, ev, BTN_TOUCH);
-        CASE_DBG(info, ev, BTN_TOOL_FINGER);
-        CASE_DBG(info, ev, BTN_TOOL_DOUBLETAP);
-        CASE_DBG(info, ev, BTN_TOOL_TRIPLETAP);
-        CASE_DBG(info, ev, BTN_TOOL_QUADTAP);
-        CASE_DBG(info, ev, BTN_TOOL_QUINTTAP);
-        default:
-            DBG(info, "@ %ld.%06ld KEY[%d] = %d\n",
-                ev->time.tv_sec, ev->time.tv_usec, ev->code, ev->value);
+            return;
         }
         break;
     default:
-        DBG(info, "@ %ld.%06ld %u[%u] = %d\n", ev->time.tv_sec,
-            ev->time.tv_usec, ev->type, ev->code, ev->value);
         break;
     }
+
+    DBG(info, "@ %ld.%06ld %s[%d] (%s) = %d\n",
+        ev->time.tv_sec, ev->time.tv_usec, Event_Type_To_String(ev->type),
+        ev->code, Event_To_String(ev->type, ev->code), ev->value);
 }
-#undef CASE_DBG
 
 /**
  * Process Input Events
