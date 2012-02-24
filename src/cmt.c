@@ -41,7 +41,13 @@
 /**
  * Forward declarations
  */
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
 static InputInfoPtr PreInit(InputDriverPtr, IDevPtr, int);
+static int NewPreInit(InputDriverPtr drv, InputInfoPtr info, int flags);
+#else
+static int PreInit(InputDriverPtr, InputInfoPtr, int);
+#endif
+
 static void UnInit(InputDriverPtr, InputInfoPtr, int);
 
 static pointer Plug(pointer, pointer, int*, int*);
@@ -77,8 +83,6 @@ _X_EXPORT InputDriverRec CMT = {
  *  For ABI >=12, module loader calls new-style PreInit() directly.
  */
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-static int
-NewPreInit(InputDriverPtr drv, InputInfoPtr info, int flags);
 
 static InputInfoPtr
 PreInit(InputDriverPtr drv, IDevPtr idev, int flags)
@@ -412,7 +416,11 @@ InitializeXDevice(DeviceIntPtr dev)
                             axes_labels);
 
     for (i=0; i < CMT_NUM_AXES; i++) {
-        xf86InitValuatorAxisStruct(dev, i, axes_labels[i], -1, -1, 1, 0, 1);
+        xf86InitValuatorAxisStruct(dev, i, axes_labels[i], -1, -1, 1, 0, 1
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 12
+                                   , Absolute
+#endif
+                                  );
         xf86InitValuatorDefaults(dev, i);
     }
 
