@@ -234,9 +234,11 @@ static void Gesture_Gesture_Ready(void* client_data,
             hscroll = (int)gesture->details.scroll.dx;
             vscroll = (int)gesture->details.scroll.dy;
             DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
-            if (props->scroll_axes)
-                xf86PostMotionEvent(dev, FALSE, 2, 4,
+            if (props->scroll_axes) {
+                /* Use is_absolute or the scroll valuator will accumulate */
+                xf86PostMotionEvent(dev, TRUE, 2, 4,
                                     start, end, vscroll, hscroll);
+            }
             if (props->scroll_btns) {
                 int button;
                 int magnitude;
