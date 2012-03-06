@@ -117,6 +117,8 @@ Event_Get_T5R2(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
+    if (Event_Get_Semi_MT(info))
+        return 0;
     return (Event_Get_Touch_Count(info) > evstate->slot_count);
 }
 
