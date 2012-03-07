@@ -519,22 +519,32 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
     case BTN_TOOL_FINGER:
         if (value)
             evstate->touch_cnt = 1;
+        else if (evstate->touch_cnt == 1)
+            evstate->touch_cnt = 0;
         break;
     case BTN_TOOL_DOUBLETAP:
         if (value)
             evstate->touch_cnt = 2;
+        else if (evstate->touch_cnt == 2)
+            evstate->touch_cnt = 0;
         break;
     case BTN_TOOL_TRIPLETAP:
         if (value)
             evstate->touch_cnt = 3;
+        else if (evstate->touch_cnt == 3)
+            evstate->touch_cnt = 0;
         break;
     case BTN_TOOL_QUADTAP:
         if (value)
             evstate->touch_cnt = 4;
+        else if (evstate->touch_cnt == 4)
+            evstate->touch_cnt = 0;
         break;
     case BTN_TOOL_QUINTTAP:
         if (value)
             evstate->touch_cnt = 5;
+        else if (evstate->touch_cnt == 5)
+            evstate->touch_cnt = 0;
         break;
     }
 }
