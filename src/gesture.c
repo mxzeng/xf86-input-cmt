@@ -208,6 +208,7 @@ static void Gesture_Gesture_Ready(void* client_data,
     int hscroll, vscroll;
     unsigned int start, end;
     unsigned int vx, vy;
+    int button;
 
     start = (unsigned long long)(1000.0L * gesture->start_time) & 0x0FFFFFFFFLL;
     end = (unsigned long long)(1000.0L * gesture->end_time) & 0x0FFFFFFFFLL;
@@ -299,6 +300,12 @@ static void Gesture_Gesture_Ready(void* client_data,
             xf86PostMotionEvent(dev, TRUE, 2, 7,
                                 start, end, 0, 0, vx, vy,
                                 gesture->details.fling.fling_state);
+            break;
+        case kGestureTypeSwipe:
+            DBG(info, "Gesture Swipe: dx=%f\n", gesture->details.swipe.dx);
+            button = gesture->details.swipe.dx > 0.f ? 9 : 8;
+            xf86PostButtonEvent(dev, TRUE, button, 1, 0, 0, start, end);
+            xf86PostButtonEvent(dev, TRUE, button, 0, 0, 0, start, end);
             break;
     }
 }

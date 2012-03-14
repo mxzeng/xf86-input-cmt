@@ -28,7 +28,7 @@
 #define NUM_EVENTS          16
 
 /* Number of buttons and axes to define on X Input device. */
-#define CMT_NUM_BUTTONS     7
+#define CMT_NUM_BUTTONS     9
 #define CMT_NUM_AXES        9
 
 #ifndef AXIS_LABEL_PROP_ABS_START_TIME
@@ -413,6 +413,8 @@ InitializeXDevice(DeviceIntPtr dev)
     btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
     btn_labels[5] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_LEFT);
     btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
+    btn_labels[7] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_BACK);
+    btn_labels[8] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_FORWARD);
 
     /* TODO: Prop to adjust button mapping */
     /* Note: Must initialize entire (CMT_NUM_BUTTONS + 1)-length map */
