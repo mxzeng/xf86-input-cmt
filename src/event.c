@@ -558,12 +558,9 @@ SemiMtSetAbsPressure(InputInfoPtr info, struct input_event* ev)
      */
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
-    int i;
 
-    for (i = 0; i < evstate->slot_count; i++) {
+    for (int i = 0; i < evstate->slot_count; i++) {
         MtSlotPtr slot = &evstate->slots[i];
-        if (slot->tracking_id == -1)
-            continue;
         slot->pressure = ev->value;
     }
 }
