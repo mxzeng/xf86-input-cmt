@@ -197,6 +197,7 @@ static void Gesture_Gesture_Ready(void* client_data,
     CmtPropertiesPtr props = &cmt->props;
     int hscroll, vscroll;
     unsigned int start, end;
+    unsigned int vx, vy;
 
     start = (unsigned long long)(1000.0L * gesture->start_time) & 0x0FFFFFFFFLL;
     end = (unsigned long long)(1000.0L * gesture->end_time) & 0x0FFFFFFFFLL;
@@ -273,6 +274,21 @@ static void Gesture_Gesture_Ready(void* client_data,
                 xf86PostButtonEvent(dev, TRUE, 2, 0, 2, 2, start, end);
             if (gesture->details.buttons.up & GESTURES_BUTTON_RIGHT)
                 xf86PostButtonEvent(dev, TRUE, 3, 0, 2, 2, start, end);
+            break;
+        case kGestureTypeFling:
+            vx = (long long)(1000.0L * gesture->details.fling.vx) &
+                    0x0FFFFFFFFLL;
+            vy = (long long)(1000.0L * gesture->details.fling.vy) &
+                    0x0FFFFFFFFLL;
+
+            DBG(info, "Gesture Fling: vx=%f(%d) vy=%f(%d) fling_state: %s\n",
+                gesture->details.fling.vx, vx,
+                gesture->details.fling.vy, vy,
+                gesture->details.fling.fling_state == GESTURES_FLING_START ?
+                    "START" : "TAP_DOWN");
+            xf86PostMotionEvent(dev, TRUE, 2, 7,
+                                start, end, 0, 0, vx, vy,
+                                gesture->details.fling.fling_state);
             break;
     }
 }
