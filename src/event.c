@@ -237,16 +237,14 @@ Event_Init(InputInfoPtr info)
     int len;
 
     if (ioctl(info->fd, EVIOCGID, &cmt->id) < 0) {
-         xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGID failed: %s\n",
-                     strerror(errno));
+         ERR(info, "ioctl EVIOCGID failed: %s\n", strerror(errno));
          return !Success;
     }
     xf86IDrvMsg(info, X_PROBED,
         "vendor: %02X, product: %02X\n", cmt->id.vendor, cmt->id.product);
 
     if (ioctl(info->fd, EVIOCGNAME(sizeof(cmt->name) - 1), cmt->name) < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGNAME failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGNAME failed: %s\n", strerror(errno));
         return !Success;
     }
     xf86IDrvMsg(info, X_PROBED, "name: %s\n", cmt->name);
@@ -254,8 +252,7 @@ Event_Init(InputInfoPtr info)
     len = ioctl(info->fd, EVIOCGPROP(sizeof(cmt->prop_bitmask)),
                 cmt->prop_bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGPROP failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGPROP failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
@@ -265,8 +262,7 @@ Event_Init(InputInfoPtr info)
 
     len = ioctl(info->fd, EVIOCGBIT(0, sizeof(cmt->bitmask)), cmt->bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGBIT failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
@@ -278,8 +274,7 @@ Event_Init(InputInfoPtr info)
     len = ioctl(info->fd, EVIOCGBIT(EV_KEY, sizeof(cmt->key_bitmask)),
                 cmt->key_bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT(EV_KEY) failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGBIT(EV_KEY) failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
@@ -291,8 +286,7 @@ Event_Init(InputInfoPtr info)
     len = ioctl(info->fd, EVIOCGBIT(EV_LED, sizeof(cmt->led_bitmask)),
                 cmt->led_bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT(EV_LED) failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGBIT(EV_LED) failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
@@ -304,8 +298,7 @@ Event_Init(InputInfoPtr info)
     len = ioctl(info->fd, EVIOCGBIT(EV_REL, sizeof(cmt->rel_bitmask)),
                 cmt->rel_bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT(EV_REL) failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGBIT(EV_REL) failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
@@ -324,8 +317,7 @@ Event_Init(InputInfoPtr info)
     len = ioctl(info->fd, EVIOCGBIT(EV_ABS, sizeof(cmt->abs_bitmask)),
                 cmt->abs_bitmask);
     if (len < 0) {
-        xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGBIT(EV_ABS) failed: %s\n",
-                    strerror(errno));
+        ERR(info, "ioctl EVIOCGBIT(EV_ABS) failed: %s\n", strerror(errno));
         return !Success;
     }
 
@@ -336,8 +328,8 @@ Event_Init(InputInfoPtr info)
                       Event_To_String(EV_ABS, i));
             len = ioctl(info->fd, EVIOCGABS(i), absinfo);
             if (len < 0) {
-                xf86IDrvMsg(info, X_ERROR, "ioctl EVIOCGABS(%d) failed: %s\n",
-                            i, strerror(errno));
+                ERR(info, "ioctl EVIOCGABS(%d) failed: %s\n", i,
+                    strerror(errno));
                 /*
                  * Clean up in case where error happens after MTB_Init() has
                  * already allocated slots.
@@ -585,8 +577,7 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     MtSlotPtr slot = evstate->slot_current;
 
     if (axis == NULL) {
-        xf86IDrvMsg(info, X_ERROR,
-            "ABS_MT[%02x] was not reported by this device\n", ev->code);
+        ERR(info, "ABS_MT[%02x] was not reported by this device\n", ev->code);
         return;
     }
 
@@ -600,8 +591,7 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     }
 
     if (slot == NULL) {
-        xf86IDrvMsg(info, X_ERROR,
-            "MT slot not set. Ignoring ABS_MT event\n");
+        ERR(info, "MT slot not set. Ignoring ABS_MT event\n");
         return;
     }
 

@@ -33,6 +33,10 @@
     xf86IDrvMsgVerb((info), X_CONFIG, DBG_VERB, "%s():%d: " format, \
         __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
+#define ERR(info, ...) \
+        xf86IDrvMsg((info), X_ERROR, ##__VA_ARGS__)
+
+
 #define LONG_BITS (sizeof(long) * 8)
 
 /* Number of longs needed to hold the given number of bits */

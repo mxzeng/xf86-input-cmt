@@ -235,14 +235,14 @@ ReadInput(InputInfoPtr info)
                 close(info->fd);
                 info->fd = -1;
             } else if (errno != EAGAIN) {
-                xf86IDrvMsg(info, X_ERROR, "Read error: %s\n", strerror(errno));
+                ERR(info, "Read error: %s\n", strerror(errno));
             }
             break;
         }
 
         /* kernel always delivers complete events, so len must be sizeof *ev */
         if (len % sizeof(*ev)) {
-            xf86IDrvMsg(info, X_ERROR, "Read error: %s\n", strerror(errno));
+            ERR(info, "Read error: %s\n", strerror(errno));
             break;
         }
 
@@ -343,7 +343,7 @@ OpenDevice(InputInfoPtr info)
     if (!cmt->device) {
         cmt->device = xf86CheckStrOption(info->options, "Device", NULL);
         if (!cmt->device) {
-            xf86IDrvMsg(info, X_ERROR, "No Device specified.\n");
+            ERR(info, "No Device specified.\n");
             return BadValue;
         }
         xf86IDrvMsg(info, X_CONFIG, "Opening Device: \"%s\"\n", cmt->device);
@@ -355,7 +355,7 @@ OpenDevice(InputInfoPtr info)
         } while (info->fd < 0 && errno == EINTR);
 
         if (info->fd < 0) {
-            xf86IDrvMsg(info, X_ERROR, "Cannot open \"%s\".\n", cmt->device);
+            ERR(info, "Cannot open \"%s\".\n", cmt->device);
             return BadValue;
         }
     }
