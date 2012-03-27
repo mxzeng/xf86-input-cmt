@@ -172,6 +172,8 @@ Error_Event_Init:
         info->fd = -1;
     }
 Error_OpenDevice:
+    free(cmt);
+    info->private = NULL;
     return rc;
 }
 
