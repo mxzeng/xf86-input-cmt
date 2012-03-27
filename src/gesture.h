@@ -20,9 +20,10 @@
 typedef struct {
     GestureInterpreter* interpreter;  /* The interpreter from Gestures lib */
     DeviceIntPtr dev;
+    struct FingerState *fingers;
 } GestureRec, *GesturePtr;
 
-int Gesture_Init(GesturePtr);
+int Gesture_Init(GesturePtr, size_t);
 void Gesture_Free(GesturePtr);
 
 /*

@@ -138,6 +138,14 @@ Event_Get_Touch_Count(InputInfoPtr info)
     return 1;
 }
 
+int
+Event_Get_Slot_Count(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+    return evstate->slot_count;
+}
+
 static int
 Event_Enable_Monotonic(InputInfoPtr info)
 {

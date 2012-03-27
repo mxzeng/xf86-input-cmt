@@ -158,7 +158,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
         info->fd = -1;
     }
 
-    rc = Gesture_Init(&cmt->gesture);
+    rc = Gesture_Init(&cmt->gesture, Event_Get_Slot_Count(info));
     if (rc != Success)
         goto Error_Gesture_Init;
 

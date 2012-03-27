@@ -46,6 +46,7 @@ int Event_Get_Button_Pad(InputInfoPtr);
 int Event_Get_Semi_MT(InputInfoPtr);
 int Event_Get_T5R2(InputInfoPtr);
 int Event_Get_Touch_Count(InputInfoPtr);
+int Event_Get_Slot_Count(InputInfoPtr);
 
 /* Some useful bit twiddling routines */
 static inline unsigned

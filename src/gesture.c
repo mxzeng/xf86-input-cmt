@@ -51,12 +51,20 @@ static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture);
 
 int
-Gesture_Init(GesturePtr rec)
+Gesture_Init(GesturePtr rec, size_t max_fingers)
 {
     rec->interpreter = NewGestureInterpreter();
     if (!rec->interpreter)
         return !Success;
+    rec->fingers = malloc(max_fingers * sizeof(struct FingerState));
+    if (!rec->fingers)
+        goto Error_Alloc_Fingers;
     return Success;
+
+Error_Alloc_Fingers:
+    DeleteGestureInterpreter(rec->interpreter);
+    rec->interpreter = NULL;
+    return BadAlloc;
 }
 
 void
@@ -142,38 +150,41 @@ Gesture_Process_Slots(GesturePtr rec,
                       EventStatePtr evstate,
                       struct timeval* tv)
 {
+    DeviceIntPtr dev = rec->dev;
+    InputInfoPtr info = dev->public.devicePrivate;
     int i;
     MtSlotPtr slot;
-    struct FingerState fingers[evstate->slot_count];
-    struct HardwareState hwstate = {
-        StimeFromTimeval(tv),
-        MT_XButtons_To_Gestures_Buttons(evstate->buttons),
-        0,
-        evstate->touch_cnt,
-        fingers
-    };
+    struct HardwareState hwstate = { 0 };
     int current_finger;
 
     if (!rec->interpreter)
         return;
+
+    /* zero initialize all FingerStates to clear out previous state. */
+    memset(rec->fingers, 0,
+           Event_Get_Slot_Count(info) * sizeof(struct FingerState));
 
     current_finger = 0;
     for (i = 0; i < evstate->slot_count; i++) {
         slot = &evstate->slots[i];
         if (slot->tracking_id == -1)
             continue;
-        fingers[current_finger].touch_major = (float)slot->touch_major;
-        fingers[current_finger].touch_minor = (float)slot->touch_minor;
-        fingers[current_finger].width_major = (float)slot->width_major;
-        fingers[current_finger].width_minor = (float)slot->width_minor;
-        fingers[current_finger].pressure    = (float)slot->pressure;
-        fingers[current_finger].orientation = (float)slot->orientation;
-        fingers[current_finger].position_x  = (float)slot->position_x;
-        fingers[current_finger].position_y  = (float)slot->position_y;
-        fingers[current_finger].tracking_id = slot->tracking_id;
+        rec->fingers[current_finger].touch_major = (float)slot->touch_major;
+        rec->fingers[current_finger].touch_minor = (float)slot->touch_minor;
+        rec->fingers[current_finger].width_major = (float)slot->width_major;
+        rec->fingers[current_finger].width_minor = (float)slot->width_minor;
+        rec->fingers[current_finger].pressure    = (float)slot->pressure;
+        rec->fingers[current_finger].orientation = (float)slot->orientation;
+        rec->fingers[current_finger].position_x  = (float)slot->position_x;
+        rec->fingers[current_finger].position_y  = (float)slot->position_y;
+        rec->fingers[current_finger].tracking_id = slot->tracking_id;
         current_finger++;
     }
+    hwstate.timestamp = StimeFromTimeval(tv);
+    hwstate.buttons_down = MT_XButtons_To_Gestures_Buttons(evstate->buttons);
+    hwstate.touch_cnt = evstate->touch_cnt;
     hwstate.finger_cnt = current_finger;
+    hwstate.fingers = rec->fingers;
     GestureInterpreterPushHardwareState(rec->interpreter, &hwstate);
 }
 
