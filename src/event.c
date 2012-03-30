@@ -22,6 +22,11 @@
 #define EVIOCSCLOCKID  _IOW('E', 0xa0, int)
 #endif
 
+/* SYN_DROPPED added in kernel v2.6.38-rc4 */
+#ifndef SYN_DROPPED
+#define SYN_DROPPED  3
+#endif
+
 static inline Bool TestBit(int, unsigned long*);
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
@@ -416,9 +421,13 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
             DBG(info, "@ %ld.%06ld  ........ SYN_MT_REPORT ......\n",
                 ev->time.tv_sec, ev->time.tv_usec);
             return;
-        default:
-            DBG(info, "@ %ld.%06ld  ????????? SYN_UNKNOWN ???????\n",
+        case SYN_DROPPED:
+            ERR(info, "@ %ld.%06ld  ++++++++ SYN_DROPPED ++++++++\n",
                 ev->time.tv_sec, ev->time.tv_usec);
+            return;
+        default:
+            ERR(info, "@ %ld.%06ld  ?????? SYN_UNKNOWN (%d) ?????\n",
+                ev->time.tv_sec, ev->time.tv_usec, ev->code);
             return;
         }
         break;
