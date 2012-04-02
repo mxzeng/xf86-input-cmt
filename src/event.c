@@ -453,7 +453,15 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
 void
 Event_Process(InputInfoPtr info, struct input_event* ev)
 {
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+
     Event_Print(info, ev);
+    if (evstate->debug_buf) {
+        evstate->debug_buf[evstate->debug_buf_tail] = *ev;
+        evstate->debug_buf_tail =
+            (evstate->debug_buf_tail + 1) % DEBUG_BUF_SIZE;
+    }
 
     switch (ev->type) {
     case EV_SYN:
@@ -473,6 +481,40 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
     }
 }
 
+/**
+ * Dump the log of input events to disk
+ */
+void
+Event_Dump_Debug_Log(InputInfoPtr info)
+{
+    size_t i;
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+
+    FILE* fp = fopen("/var/log/cmt_input_events.dat", "wb");
+    if (!fp) {
+        ERR(info, "fopen() failed for debug log");
+        return;
+    }
+    for (i = 0; i < DEBUG_BUF_SIZE; i++) {
+        size_t rc;
+        struct input_event *ev =
+            &evstate->debug_buf[(evstate->debug_buf_tail + i) % DEBUG_BUF_SIZE];
+        if (ev->time.tv_sec == 0 && ev->time.tv_usec == 0)
+            continue;
+        rc = fprintf(fp, "E: %ld.%06ld %04x %04x %d\n",
+                            ev->time.tv_sec,
+                            ev->time.tv_usec,
+                            ev->type,
+                            ev->code,
+                            ev->value);
+        if (rc == 0) {
+            ERR(info, "fprintf() failed for debug log. Log is short");
+            break;
+        }
+    }
+    fclose(fp);
+}
 
 static void
 Event_Syn(InputInfoPtr info, struct input_event* ev)

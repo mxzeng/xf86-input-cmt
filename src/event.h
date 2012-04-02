@@ -19,6 +19,9 @@
 #define BUTTON_RIGHT                0x02
 #define BUTTON_MIDDLE               0x04
 
+/* 1 MiB debug buffer of struct input_event objects */
+#define DEBUG_BUF_SIZE      65536
+
 typedef struct {
     int slot_min;
     int slot_count;
@@ -29,12 +32,17 @@ typedef struct {
 
     unsigned buttons;
     unsigned touch_cnt;
+
+    /* Log of recent input_event structs for debugging */
+    struct input_event debug_buf[DEBUG_BUF_SIZE];
+    size_t debug_buf_tail;
 } EventStateRec, *EventStatePtr;
 
 int Event_Init(InputInfoPtr);
 void Event_Free(InputInfoPtr);
 void Event_Open(InputInfoPtr);
 void Event_Process(InputInfoPtr, struct input_event*);
+void Event_Dump_Debug_Log(InputInfoPtr);
 
 int Event_Get_Left(InputInfoPtr);
 int Event_Get_Right(InputInfoPtr);

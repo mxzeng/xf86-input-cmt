@@ -14,6 +14,7 @@
 
 #include "cmt.h"
 #include "cmt-properties.h"
+#include "event.h"
 
 typedef enum PropType {
     PropTypeInt,
@@ -100,6 +101,7 @@ PropertiesInit(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
     CmtPropertiesPtr props = &cmt->props;
+    GesturesProp *dump_debug_log_prop;
 
     cmt->handlers = XIRegisterPropertyHandler(dev, PropertySet, PropertyGet,
                                               PropertyDel);
@@ -135,6 +137,12 @@ PropertiesInit(DeviceIntPtr dev)
 
     PropCreate_Bool(dev, CMT_PROP_SCROLL_BTN, &props->scroll_btns, TRUE);
     PropCreate_Bool(dev, CMT_PROP_SCROLL_AXES, &props->scroll_axes, FALSE);
+    dump_debug_log_prop = PropCreate_Bool(dev,
+                                          CMT_PROP_DUMP_DEBUG_LOG,
+                                          &props->dump_debug_log,
+                                          FALSE);
+    Prop_RegisterHandlers(dev, dump_debug_log_prop, info, NULL,
+                          Event_Dump_Debug_Log);
 
     return Success;
 }
