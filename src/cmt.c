@@ -183,6 +183,8 @@ ReadInput(InputInfoPtr info)
     struct input_event ev[NUM_EVENTS];
     int i;
     int len;
+    Bool sync_evdev_state = FALSE;
+    CmtDevicePtr cmt = info->private;
 
     do {
         len = read(info->fd, &ev, sizeof(ev));
@@ -204,11 +206,26 @@ ReadInput(InputInfoPtr info)
         }
 
         /* Process events ... */
-        for (i = 0; i < len/sizeof(ev[0]); i++)
-            Event_Process(info, &ev[i]);
+        for (i = 0; i < len/sizeof(ev[0]); i++) {
+            if (sync_evdev_state)
+                break;
+            if (timercmp(&ev[i].time, &cmt->before_sync_time, <)) {
+                /* Ignore events before last sync time */
+                continue;
+            } else if (timercmp(&ev[i].time, &cmt->after_sync_time, >)) {
+                /* Event_Process returns TRUE if SYN_DROPPED detected */
+                sync_evdev_state = Event_Process(info, &ev[i]);
+            } else {
+                /* If the event occurred during sync, then sync again */
+                sync_evdev_state = TRUE;
+            }
+        }
 
     } while (len == sizeof(ev));
     /* Keep reading if kernel supplied NUM_EVENTS events. */
+
+    if (sync_evdev_state)
+        Event_Sync_State(info);
 }
 
 /**

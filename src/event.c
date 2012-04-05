@@ -22,10 +22,21 @@
 #define EVIOCSCLOCKID  _IOW('E', 0xa0, int)
 #endif
 
+#ifndef EVIOCGMTSLOTS
+#define EVIOCGMTSLOTS(len)  _IOC(_IOC_READ, 'E', 0x0a, len)
+#endif
+
 /* SYN_DROPPED added in kernel v2.6.38-rc4 */
 #ifndef SYN_DROPPED
 #define SYN_DROPPED  3
 #endif
+
+#define MAX_SLOT_COUNT  64
+
+typedef struct {
+    unsigned code;
+    int values[MAX_SLOT_COUNT];
+} MTSlotInfo;
 
 static inline void AssignBit(unsigned long*, int, int);
 static inline Bool TestBit(int, unsigned long*);
@@ -42,7 +53,8 @@ static void Event_Key(InputInfoPtr, struct input_event*);
 static void Event_Abs(InputInfoPtr, struct input_event*);
 static void Event_Abs_MT(InputInfoPtr, struct input_event*);
 static void SemiMtSetAbsPressure(InputInfoPtr, struct input_event*);
-static void Event_Sync_Touch_Count(InputInfoPtr);
+static void Event_Sync_Keys(InputInfoPtr);
+static void Event_Get_Time(struct timeval*, Bool);
 
 /**
  * Helper functions
@@ -52,8 +64,6 @@ TestBit(int bit, unsigned long* array)
 {
     return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
 }
-
-/* TODO(cywang): Merge with Bit_Assign() function. */
 
 static inline void
 AssignBit(unsigned long* array, int bit, int value)
@@ -157,7 +167,7 @@ Event_Get_Touch_Count_Max(InputInfoPtr info)
 }
 
 static void
-Event_Sync_Touch_Count(InputInfoPtr info)
+Event_Sync_Keys(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
     int len = sizeof(cmt->key_state_bitmask);
@@ -417,12 +427,8 @@ Event_Init(InputInfoPtr info)
         }
     }
 
-    /*
-     * TODO(djkurtz): probe driver for current MT slot states when supported
-     * by kernel input subsystem.
-     */
-    Event_Sync_Touch_Count(info);
-
+    /* Synchronize all MT slots with kernel evdev driver */
+    Event_Sync_State(info);
     return Success;
 
 error_MT_Free:
@@ -443,6 +449,11 @@ Event_Open(InputInfoPtr info)
 
     /* Select monotonic input event timestamps, if supported by kernel */
     cmt->is_monotonic = (Event_Enable_Monotonic(info) == Success);
+    if (cmt->is_monotonic) {
+        /* Reset the sync time variables */
+        Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
+        Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
+    }
     xf86IDrvMsg(info, X_PROBED, "Using %s input event time stamps\n",
                 cmt->is_monotonic ? "monotonic" : "realtime");
 }
@@ -459,6 +470,89 @@ Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
         PROBE_DBG(info, "    fuzz = %d\n", absinfo->fuzz);
     if (absinfo->resolution)
         PROBE_DBG(info, "    res = %d\n", absinfo->resolution);
+}
+
+static void
+Event_Get_Time(struct timeval *t, Bool use_monotonic) {
+    struct timespec now;
+    clockid_t clockid = (use_monotonic) ? CLOCK_MONOTONIC : CLOCK_REALTIME;
+
+    clock_gettime(clockid, &now);
+    t->tv_sec = now.tv_sec;
+    t->tv_usec = now.tv_nsec / 1000;
+}
+
+/**
+ * Synchronize the current state with kernel evdev driver. For cmt, there are
+ * only four components required to be synced: current touch count, the MT
+ * slots information, current slot id and physical button states. However, as
+ * pressure readings are missing in ABS_MT_PRESSURE field of MT slots for
+ * semi_mt touchpad device (e.g. Cr48), we also need need to extract it with
+ * extra EVIOCGABS query.
+ */
+void
+Event_Sync_State(InputInfoPtr info)
+{
+    int i;
+    struct input_absinfo* absinfo;
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+
+    Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
+
+    Event_Sync_Keys(info);
+
+    /* Get current pressure information for semi_mt device */
+    if (Event_Get_Semi_MT(info)) {
+        absinfo = &cmt->absinfo[ABS_PRESSURE];
+        if (ioctl(info->fd, EVIOCGABS(ABS_PRESSURE), absinfo) < 0) {
+            ERR(info, "ioctl EVIOCGABS(ABS_PRESSURE) failed: %s\n",
+                strerror(errno));
+        } else {
+            struct input_event ev;
+            ev.code = ABS_PRESSURE;
+            ev.value = absinfo->value;
+            SemiMtSetAbsPressure(info, &ev);
+        }
+    }
+
+    /* TODO(cywang): Sync all ABS_ states for completeness */
+
+    /* Get current MT information for each slot */
+    for (i = _ABS_MT_FIRST; i <= _ABS_MT_LAST; i++) {
+        int j;
+        MTSlotInfo req;
+
+        /*
+         * TODO(cywang): Scale the size of slots in MTSlotInfo based on the
+         *    evstate->slot_count.
+         */
+
+        req.code = i;
+        if (ioctl(info->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0)
+          continue;
+        for (j = 0; j < evstate->slot_count; j++) {
+            struct input_event ev;
+            MT_Slot_Set(info, j);
+            ev.code = req.code;
+            ev.value = req.values[j];
+            Event_Abs(info, &ev);
+        }
+    }
+
+    /* Get current slot id */
+    absinfo = &cmt->absinfo[ABS_MT_SLOT];
+    if (ioctl(info->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0) {
+        ERR(info, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n", strerror(errno));
+    } else {
+        MT_Slot_Set(info, absinfo->value);
+    }
+
+    Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
+    xf86IDrvMsg(info, X_PROBED,
+                "Event_Sync_State: before %ld.%ld after %ld.%ld\n",
+                cmt->before_sync_time.tv_sec, cmt->before_sync_time.tv_usec,
+                cmt->after_sync_time.tv_sec, cmt->after_sync_time.tv_usec);
 }
 
 static void
@@ -504,7 +598,7 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
 /**
  * Process Input Events
  */
-void
+Bool
 Event_Process(InputInfoPtr info, struct input_event* ev)
 {
     CmtDevicePtr cmt = info->private;
@@ -519,6 +613,8 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
 
     switch (ev->type) {
     case EV_SYN:
+        if (ev->code == SYN_DROPPED)
+            return TRUE;
         Event_Syn(info, ev);
         break;
 
@@ -533,14 +629,16 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
     default:
         break;
     }
+    return FALSE;
 }
 
 /**
  * Dump the log of input events to disk
  */
 void
-Event_Dump_Debug_Log(InputInfoPtr info)
+Event_Dump_Debug_Log(void* vinfo)
 {
+    InputInfoPtr info = (InputInfoPtr) vinfo;
     size_t i;
     CmtDevicePtr cmt = info->private;
     EventStatePtr evstate = &cmt->evstate;
@@ -609,13 +707,13 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
 
     switch (ev->code) {
     case BTN_LEFT:
-        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_LEFT, value);
+        AssignBit(&evstate->buttons, BUTTON_LEFT, value);
         break;
     case BTN_RIGHT:
-        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_RIGHT, value);
+        AssignBit(&evstate->buttons, BUTTON_RIGHT, value);
         break;
     case BTN_MIDDLE:
-        evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_MIDDLE, value);
+        AssignBit(&evstate->buttons, BUTTON_MIDDLE, value);
         break;
     case BTN_TOUCH:
     case BTN_TOOL_FINGER:

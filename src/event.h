@@ -30,7 +30,7 @@ typedef struct {
 
     struct input_absinfo* mt_axes[_ABS_MT_CNT];
 
-    unsigned buttons;
+    unsigned long buttons;
     unsigned touch_cnt;
 
     /* Log of recent input_event structs for debugging */
@@ -41,8 +41,8 @@ typedef struct {
 int Event_Init(InputInfoPtr);
 void Event_Free(InputInfoPtr);
 void Event_Open(InputInfoPtr);
-void Event_Process(InputInfoPtr, struct input_event*);
-void Event_Dump_Debug_Log(InputInfoPtr);
+Bool Event_Process(InputInfoPtr, struct input_event*);
+void Event_Dump_Debug_Log(void *);
 
 int Event_Get_Left(InputInfoPtr);
 int Event_Get_Right(InputInfoPtr);
@@ -56,30 +56,6 @@ int Event_Get_T5R2(InputInfoPtr);
 int Event_Get_Touch_Count(InputInfoPtr);
 int Event_Get_Touch_Count_Max(InputInfoPtr);
 int Event_Get_Slot_Count(InputInfoPtr);
-
-/* Some useful bit twiddling routines */
-static inline unsigned
-Bit_Set(unsigned start, unsigned mask)
-{
-    return start | mask;
-}
-
-static inline unsigned
-Bit_Clr(unsigned start, unsigned mask)
-{
-    return start & ~mask;
-}
-
-static inline unsigned
-Bit_Flip(unsigned start, unsigned mask)
-{
-    return start ^ mask;
-}
-
-static inline unsigned
-Bit_Assign(unsigned start, unsigned mask, unsigned val)
-{
-    return val ? (start | mask) : (start & ~mask);
-}
+void Event_Sync_State(InputInfoPtr info);
 
 #endif

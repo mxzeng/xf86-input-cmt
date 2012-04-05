@@ -63,6 +63,8 @@ typedef struct {
     struct input_absinfo absinfo[ABS_CNT];
     unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
     int is_monotonic:1;
+    struct timeval before_sync_time;
+    struct timeval after_sync_time;
 
     /*
      * For relative mode devices, the timestamp on Motion Events is reported

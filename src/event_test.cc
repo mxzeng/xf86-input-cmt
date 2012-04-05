@@ -25,10 +25,6 @@ extern "C" {
 
 class EventTest : public ::testing::Test {};
 
-TEST(EventTest, Bit_SetTest) {
-  EXPECT_EQ(3, Bit_Set(1, 2));
-}
-
 TEST(EventTest, Event_Get_LeftTest) {
   CmtDeviceRec cmt;
   InputInfoRec info;

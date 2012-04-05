@@ -14,7 +14,7 @@
 #include "cmt.h"
 #include "properties.h"
 
-static unsigned MT_XButtons_To_Gestures_Buttons(unsigned);
+static unsigned MT_XButtons_To_Gestures_Buttons(unsigned long);
 
 /*
  * Gestures timer functions
@@ -132,7 +132,7 @@ Gesture_Device_Close(GesturePtr rec)
 }
 
 static unsigned
-MT_XButtons_To_Gestures_Buttons(unsigned xbuttons)
+MT_XButtons_To_Gestures_Buttons(unsigned long xbuttons)
 {
     unsigned ret = 0;
     if (xbuttons & BUTTON_LEFT)
