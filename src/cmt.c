@@ -31,10 +31,6 @@
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
 
-/* Number of buttons and axes to define on X Input device. */
-#define CMT_NUM_BUTTONS     9
-#define CMT_NUM_AXES        9
-
 #ifndef AXIS_LABEL_PROP_ABS_START_TIME
 #define AXIS_LABEL_PROP_ABS_START_TIME     "Abs Start Timestamp"
 #endif
@@ -45,6 +41,11 @@
 #define AXIS_LABEL_PROP_ABS_FLING_VX       "Abs Fling X Velocity"
 #define AXIS_LABEL_PROP_ABS_FLING_VY       "Abs Fling Y Velocity"
 #define AXIS_LABEL_PROP_ABS_FLING_STATE    "Abs Fling State"
+
+#define AXIS_LABEL_PROP_ABS_DBL_START_TIME "Abs Dbl Start Timestamp"
+#define AXIS_LABEL_PROP_ABS_DBL_END_TIME   "Abs Dbl End Timestamp"
+#define AXIS_LABEL_PROP_ABS_DBL_FLING_VX   "Abs Dbl Fling X Velocity"
+#define AXIS_LABEL_PROP_ABS_DBL_FLING_VY   "Abs Dbl Fling Y Velocity"
 /**
  * Forward declarations
  */
@@ -363,43 +364,60 @@ InitAtom(const char* name)
 static int
 InitializeXDevice(DeviceIntPtr dev)
 {
-    CARD8 map[CMT_NUM_BUTTONS + 1];
-    int i;
-    Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
+    static const char* axes_names[CMT_NUM_AXES] = {
+        AXIS_LABEL_PROP_REL_X,
+        AXIS_LABEL_PROP_REL_Y,
+        AXIS_LABEL_PROP_REL_HWHEEL,
+        AXIS_LABEL_PROP_REL_WHEEL,
+        AXIS_LABEL_PROP_ABS_FLING_VX,
+        AXIS_LABEL_PROP_ABS_FLING_VY,
+        AXIS_LABEL_PROP_ABS_FLING_STATE,
+        AXIS_LABEL_PROP_ABS_START_TIME,
+        AXIS_LABEL_PROP_ABS_END_TIME,
+        AXIS_LABEL_PROP_ABS_DBL_FLING_VX,
+        AXIS_LABEL_PROP_ABS_DBL_FLING_VY,
+        AXIS_LABEL_PROP_ABS_DBL_START_TIME,
+        AXIS_LABEL_PROP_ABS_DBL_END_TIME
+    };
+    static const char* btn_names[CMT_NUM_BUTTONS] = {
+        BTN_LABEL_PROP_BTN_LEFT,
+        BTN_LABEL_PROP_BTN_MIDDLE,
+        BTN_LABEL_PROP_BTN_RIGHT,
+        BTN_LABEL_PROP_BTN_BACK,
+        BTN_LABEL_PROP_BTN_FORWARD,
+    };
+
     Atom axes_labels[CMT_NUM_AXES] = { 0 };
-
-    axes_labels[0] = InitAtom(AXIS_LABEL_PROP_REL_X);
-    axes_labels[1] = InitAtom(AXIS_LABEL_PROP_REL_Y);
-    axes_labels[2] = InitAtom(AXIS_LABEL_PROP_ABS_START_TIME);
-    axes_labels[3] = InitAtom(AXIS_LABEL_PROP_ABS_END_TIME);
-    axes_labels[4] = InitAtom(AXIS_LABEL_PROP_REL_WHEEL);
-    axes_labels[5] = InitAtom(AXIS_LABEL_PROP_REL_HWHEEL);
-    axes_labels[6] = InitAtom(AXIS_LABEL_PROP_ABS_FLING_VX);
-    axes_labels[7] = InitAtom(AXIS_LABEL_PROP_ABS_FLING_VY);
-    axes_labels[8] = InitAtom(AXIS_LABEL_PROP_ABS_FLING_STATE);
-
-    btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
-    btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
-    btn_labels[2] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_RIGHT);
-    btn_labels[3] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_UP);
-    btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
-    btn_labels[5] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_LEFT);
-    btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
-    btn_labels[7] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_BACK);
-    btn_labels[8] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_FORWARD);
+    Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
+    /* Map our button numbers to standard ones. */
+    CARD8 map[CMT_NUM_BUTTONS + 1] = {
+        0,  /* Ignored */
+        1,
+        2,
+        3,
+        8,  /* Back */
+        9   /* Forward */
+    };
+    int i;
 
     /* TODO: Prop to adjust button mapping */
-    /* Note: Must initialize entire (CMT_NUM_BUTTONS + 1)-length map */
-    for (i = 0; i <= CMT_NUM_BUTTONS; i++)
-        map[i] = i;
+    for (i = 0; i < CMT_NUM_BUTTONS; i++)
+        btn_labels[i] = XIGetKnownProperty(btn_names[i]);
 
-    InitPointerDeviceStruct((DevicePtr)dev, map, CMT_NUM_BUTTONS, btn_labels,
-                            PointerCtrl, GetMotionHistorySize(), CMT_NUM_AXES,
-                            axes_labels);
+    for (i = 0; i < CMT_NUM_AXES; i++)
+        axes_labels[i] = InitAtom(axes_names[i]);
 
-    for (i=0; i < CMT_NUM_AXES; i++) {
-        xf86InitValuatorAxisStruct(dev, i, axes_labels[i],
-                                   -1, -1, 1, 0, 1, Absolute);
+    InitPointerDeviceStruct((DevicePtr)dev,
+                            map,
+                            CMT_NUM_BUTTONS, btn_labels,
+                            PointerCtrl,
+                            GetMotionHistorySize(),
+                            CMT_NUM_AXES, axes_labels);
+
+    for (i = 0; i < CMT_NUM_AXES; i++) {
+        int mode = (i == CMT_AXIS_X || i == CMT_AXIS_Y) ? Relative : Absolute;
+        xf86InitValuatorAxisStruct(
+            dev, i, axes_labels[i], -1, -1, 1, 0, 1, mode);
         xf86InitValuatorDefaults(dev, i);
     }
 

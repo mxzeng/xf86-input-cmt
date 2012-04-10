@@ -42,6 +42,36 @@
 /* Number of longs needed to hold the given number of bits */
 #define NLONGS(x) (((x) + LONG_BITS - 1) / LONG_BITS)
 
+/* Axes numbers. */
+enum CMT_AXIS {
+    CMT_AXIS_X = 0,
+    CMT_AXIS_Y,
+    CMT_AXIS_SCROLL_X,
+    CMT_AXIS_SCROLL_Y,
+    CMT_AXIS_FLING_VX,
+    CMT_AXIS_FLING_VY,
+    CMT_AXIS_FLING_STATE,
+    CMT_AXIS_START_TIME,
+    CMT_AXIS_END_TIME,
+    CMT_AXIS_DBL_FLING_VX,
+    CMT_AXIS_DBL_FLING_VY,
+    CMT_AXIS_DBL_START_TIME,
+    CMT_AXIS_DBL_END_TIME
+};
+
+#define CMT_NUM_AXES (CMT_AXIS_DBL_END_TIME - CMT_AXIS_X + 1)
+
+/* Button numbers. */
+enum CMT_BUTTON {
+    CMT_BTN_LEFT = 1,
+    CMT_BTN_MIDDLE,
+    CMT_BTN_RIGHT,
+    CMT_BTN_BACK,
+    CMT_BTN_FORWARD
+};
+
+#define CMT_NUM_BUTTONS (CMT_BTN_FORWARD - CMT_BTN_LEFT + 1)
+
 typedef struct {
     CmtProperties props;
     EventStateRec evstate;
@@ -65,14 +95,6 @@ typedef struct {
     int is_monotonic:1;
     struct timeval before_sync_time;
     struct timeval after_sync_time;
-
-    /*
-     * For relative mode devices, the timestamp on Motion Events is reported
-     * using a relative valuator.  To pass the absolute timestamp through the
-     * X server, we track the previous timestamp, and send a delta.
-     */
-    unsigned int last_start_time;
-    unsigned int last_end_time;
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif

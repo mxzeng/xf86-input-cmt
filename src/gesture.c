@@ -187,21 +187,65 @@ Gesture_Process_Slots(GesturePtr rec,
     GestureInterpreterPushHardwareState(rec->interpreter, &hwstate);
 }
 
+static void SetTimeValues(ValuatorMask* mask,
+                          const struct Gesture* gesture,
+                          DeviceIntPtr dev,
+                          BOOL is_absolute)
+{
+    float start_float = gesture->start_time;
+    float end_float = gesture->end_time;
+    unsigned int start_int;
+    unsigned int end_int;
+
+    if (!is_absolute) {
+        /*
+         * We send the movement axes as relative values, which causes the
+         * times to be sent as relative values too. This code computes the
+         * right relative values.
+         */
+        start_float -= dev->last.valuators[CMT_AXIS_DBL_START_TIME];
+        end_float -= dev->last.valuators[CMT_AXIS_DBL_END_TIME];
+    }
+
+    start_int = (unsigned long long)(1000.0L * start_float) & 0x0FFFFFFFFLL;
+    end_int = (unsigned long long)(1000.0L * end_float) & 0x0FFFFFFFFLL;
+
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_START_TIME, start_float);
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_float);
+    valuator_mask_set(mask, CMT_AXIS_START_TIME, start_int);
+    valuator_mask_set(mask, CMT_AXIS_END_TIME, end_int);
+}
+
+static void SetFlingValues(ValuatorMask* mask,
+                           const struct Gesture* gesture)
+{
+    float vx_float = gesture->details.fling.vx;
+    float vy_float = gesture->details.fling.vy;
+
+    unsigned int vx_int =
+        (unsigned long long)(1000.0L * vx_float) & 0x0FFFFFFFFLL;
+    unsigned int vy_int =
+        (unsigned long long)(1000.0L * vy_float) & 0x0FFFFFFFFLL;
+
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, vx_float);
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, vy_float);
+    valuator_mask_set(mask, CMT_AXIS_FLING_VX, vx_int);
+    valuator_mask_set(mask, CMT_AXIS_FLING_VY, vy_int);
+    valuator_mask_set(
+        mask, CMT_AXIS_FLING_STATE, gesture->details.fling.fling_state);
+}
+
 static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture)
 {
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
-    int hscroll, vscroll;
-    unsigned int start, end;
-    unsigned int vx, vy;
+    ValuatorMask *mask = NULL;
     int button;
 
-    start = (unsigned long long)(1000.0L * gesture->start_time) & 0x0FFFFFFFFLL;
-    end = (unsigned long long)(1000.0L * gesture->end_time) & 0x0FFFFFFFFLL;
-    DBG(info, "Gesture Start: %f (%u) End: %f (%u)\n",
-        gesture->start_time, start, gesture->end_time, end);
+    DBG(info, "Gesture Start: %f End: %f \n",
+        gesture->start_time, gesture->end_time);
 
     switch (gesture->type) {
         case kGestureTypeContactInitiated:
@@ -210,75 +254,67 @@ static void Gesture_Gesture_Ready(void* client_data,
         case kGestureTypeMove:
             DBG(info, "Gesture Move: (%d, %d)\n",
                 (int)gesture->details.move.dx, (int)gesture->details.move.dy);
-
-            /*
-             * We send the movement axes as relative values, which causes the
-             * times to be sent as relative values too. This code computes the
-             * right relative values.
-             *
-             * NOTE: even though we send different absolute values for these
-             * same axes in other events, it appears that XI only uses the
-             * last relative value when computing the new relative values it
-             * sends to clients
-             */
-            xf86PostMotionEvent(dev, FALSE, 0, 4,
-                                (int)gesture->details.move.dx,
-                                (int)gesture->details.move.dy,
-                                start - cmt->last_start_time,
-                                end - cmt->last_end_time);
-
-            cmt->last_start_time = start;
-            cmt->last_end_time = end;
+            mask = valuator_mask_new(6);
+            valuator_mask_set_double(
+                mask, CMT_AXIS_X, gesture->details.move.dx);
+            valuator_mask_set_double(
+                mask, CMT_AXIS_Y, gesture->details.move.dy);
+            SetTimeValues(mask, gesture, dev, FALSE);
+            xf86PostMotionEventM(dev, FALSE, mask);
             break;
         case kGestureTypeScroll:
-            hscroll = (int)gesture->details.scroll.dx;
-            vscroll = (int)gesture->details.scroll.dy;
-            DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
-            /* Use is_absolute or the scroll valuator will accumulate */
-            xf86PostMotionEvent(dev, TRUE, 2, 4,
-                                start, end, vscroll, hscroll);
+            DBG(info, "Gesture Scroll: (%f, %f)\n",
+                gesture->details.scroll.dx, gesture->details.scroll.dy);
+            mask = valuator_mask_new(6);
+            valuator_mask_set_double(
+                mask, CMT_AXIS_SCROLL_X, gesture->details.scroll.dx);
+            valuator_mask_set_double(
+                mask, CMT_AXIS_SCROLL_Y, gesture->details.scroll.dy);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
         case kGestureTypeButtonsChange:
             DBG(info, "Gesture Button Change: down=0x%02x up=0x%02x\n",
                 gesture->details.buttons.down, gesture->details.buttons.up);
+            mask = valuator_mask_new(2);
+            SetTimeValues(mask, gesture, dev, TRUE);
             if (gesture->details.buttons.down & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEvent(dev, TRUE, 1, 1, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 1, mask);
             if (gesture->details.buttons.down & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEvent(dev, TRUE, 2, 1, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 1, mask);
             if (gesture->details.buttons.down & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEvent(dev, TRUE, 3, 1, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 1, mask);
             if (gesture->details.buttons.up & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEvent(dev, TRUE, 1, 0, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 0, mask);
             if (gesture->details.buttons.up & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEvent(dev, TRUE, 2, 0, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 0, mask);
             if (gesture->details.buttons.up & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEvent(dev, TRUE, 3, 0, 2, 2, start, end);
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 0, mask);
             break;
         case kGestureTypeFling:
-            vx = (long long)(1000.0L * gesture->details.fling.vx) &
-                    0x0FFFFFFFFLL;
-            vy = (long long)(1000.0L * gesture->details.fling.vy) &
-                    0x0FFFFFFFFLL;
-
-            DBG(info, "Gesture Fling: vx=%f(%d) vy=%f(%d) fling_state: %s\n",
-                gesture->details.fling.vx, vx,
-                gesture->details.fling.vy, vy,
-                gesture->details.fling.fling_state == GESTURES_FLING_START ?
-                    "START" : "TAP_DOWN");
-            xf86PostMotionEvent(dev, TRUE, 2, 7,
-                                start, end, 0, 0, vx, vy,
-                                gesture->details.fling.fling_state);
+            DBG(info, "Gesture Fling: vx=%f vy=%f fling_state=%d\n",
+                gesture->details.fling.vx, gesture->details.fling.vy,
+                gesture->details.fling.fling_state);
+            mask = valuator_mask_new(9);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            SetFlingValues(mask, gesture);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
         case kGestureTypeSwipe:
             DBG(info, "Gesture Swipe: dx=%f\n", gesture->details.swipe.dx);
-            button = gesture->details.swipe.dx > 0.f ? 9 : 8;
-            xf86PostButtonEvent(dev, TRUE, button, 1, 0, 0, start, end);
-            xf86PostButtonEvent(dev, TRUE, button, 0, 0, 0, start, end);
+            mask = valuator_mask_new(4);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            button = gesture->details.swipe.dx > 0.f ?
+                CMT_BTN_FORWARD : CMT_BTN_BACK;
+            xf86PostButtonEventM(dev, TRUE, button, 1, mask);
+            xf86PostButtonEventM(dev, TRUE, button, 0, mask);
             break;
         default:
             ERR(info, "Unrecognized gesture type (%u)\n", gesture->type);
             break;
     }
+    if (mask)
+        valuator_mask_free(&mask);
 }
 
 static GesturesTimer*
