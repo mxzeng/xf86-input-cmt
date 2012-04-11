@@ -24,6 +24,10 @@
 #include "event.h"
 #include "properties.h"
 
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
+#error Unsupported XInput version. Major version 12 and above required.
+#endif
+
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
 
@@ -44,13 +48,7 @@
 /**
  * Forward declarations
  */
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-static InputInfoPtr PreInit(InputDriverPtr, IDevPtr, int);
-static int NewPreInit(InputDriverPtr drv, InputInfoPtr info, int flags);
-#else
 static int PreInit(InputDriverPtr, InputInfoPtr, int);
-#endif
-
 static void UnInit(InputDriverPtr, InputInfoPtr, int);
 
 static pointer Plug(pointer, pointer, int*, int*);
@@ -80,51 +78,8 @@ _X_EXPORT InputDriverRec CMT = {
     0
 };
 
-/*
- *  For ABI <12, module loader calls old-style PreInit().
- *     old-style PreInit() then calls new-style NewPreInit().
- *  For ABI >=12, module loader calls new-style PreInit() directly.
- */
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
-
-static InputInfoPtr
-PreInit(InputDriverPtr drv, IDevPtr idev, int flags)
-{
-    InputInfoPtr info;
-
-    /* Allocate a new InputInfoRec and add it to the head xf86InputDevs. */
-    info = xf86AllocateInput(drv, 0);
-    if (!info) {
-        return NULL;
-    }
-
-    /* initialize the InputInfoRec */
-    info->name                    = idev->identifier;
-    info->reverse_conversion_proc = NULL;
-    info->dev                     = NULL;
-    info->private_flags           = 0;
-    info->flags                   = XI86_SEND_DRAG_EVENTS;
-    info->conf_idev               = idev;
-    info->always_core_feedback    = 0;
-
-    DBG(info, "PreInit\n");
-
-    xf86CollectInputOptions(info, NULL, NULL);
-
-    if (NewPreInit(drv, info, flags) != Success)
-        return NULL;
-
-    info->flags |= XI86_CONFIGURED;
-
-    return info;
-}
-
-static int
-NewPreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
-#else
 static int
 PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
-#endif
 {
     CmtDevicePtr cmt;
     int rc;
@@ -426,11 +381,8 @@ InitializeXDevice(DeviceIntPtr dev)
                             axes_labels);
 
     for (i=0; i < CMT_NUM_AXES; i++) {
-        xf86InitValuatorAxisStruct(dev, i, axes_labels[i], -1, -1, 1, 0, 1
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 12
-                                   , Absolute
-#endif
-                                  );
+        xf86InitValuatorAxisStruct(dev, i, axes_labels[i],
+                                   -1, -1, 1, 0, 1, Absolute);
         xf86InitValuatorDefaults(dev, i);
     }
 
