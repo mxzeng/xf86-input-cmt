@@ -190,17 +190,6 @@ Gesture_Process_Slots(GesturePtr rec,
 static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture)
 {
-    /* TODO: These constants would be affected by X input driver
-       button remapping. */
-    const int kScrollBtnUp    = 4;
-    const int kScrollBtnDown  = 5;
-    const int kScrollBtnLeft  = 6;
-    const int kScrollBtnRight = 7;
-
-    /* Assume that each scroll increment will scroll by 3 pixels
-       when using buttons instead of axes. */
-    const int kPixelsPerBtn = 3;
-
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
@@ -246,29 +235,9 @@ static void Gesture_Gesture_Ready(void* client_data,
             hscroll = (int)gesture->details.scroll.dx;
             vscroll = (int)gesture->details.scroll.dy;
             DBG(info, "Gesture Scroll: (%d, %d)\n", hscroll, vscroll);
-            if (props->scroll_axes) {
-                /* Use is_absolute or the scroll valuator will accumulate */
-                xf86PostMotionEvent(dev, TRUE, 2, 4,
-                                    start, end, vscroll, hscroll);
-            }
-            if (props->scroll_btns) {
-                int button;
-                int magnitude;
-                button = hscroll < 0 ? kScrollBtnLeft : kScrollBtnRight;
-                magnitude = hscroll < 0 ? -hscroll : hscroll;
-                magnitude = round((float)magnitude / kPixelsPerBtn);
-                for (int i = 0; i < magnitude; i++) {
-                    xf86PostButtonEvent(dev, TRUE, button, 1, 4, 2, start, end);
-                    xf86PostButtonEvent(dev, TRUE, button, 0, 4, 2, start, end);
-                }
-                button = vscroll < 0 ? kScrollBtnUp : kScrollBtnDown;
-                magnitude = vscroll < 0 ? -vscroll : vscroll;
-                magnitude = round((float)magnitude / kPixelsPerBtn);
-                for (int i = 0; i < magnitude; i++) {
-                    xf86PostButtonEvent(dev, TRUE, button, 1, 2, 2, start, end);
-                    xf86PostButtonEvent(dev, TRUE, button, 0, 2, 2, start, end);
-                }
-            }
+            /* Use is_absolute or the scroll valuator will accumulate */
+            xf86PostMotionEvent(dev, TRUE, 2, 4,
+                                start, end, vscroll, hscroll);
             break;
         case kGestureTypeButtonsChange:
             DBG(info, "Gesture Button Change: down=0x%02x up=0x%02x\n",

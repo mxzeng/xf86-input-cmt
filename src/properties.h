@@ -21,8 +21,6 @@ typedef struct {
     int  area_bottom;
     int  res_y;
     int  res_x;
-    GesturesPropBool scroll_btns;
-    GesturesPropBool scroll_axes;
     GesturesPropBool dump_debug_log;
 } CmtProperties, *CmtPropertiesPtr;
 
