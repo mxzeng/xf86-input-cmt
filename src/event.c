@@ -27,6 +27,7 @@
 #define SYN_DROPPED  3
 #endif
 
+static inline void AssignBit(unsigned long*, int, int);
 static inline Bool TestBit(int, unsigned long*);
 
 static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
@@ -41,7 +42,7 @@ static void Event_Key(InputInfoPtr, struct input_event*);
 static void Event_Abs(InputInfoPtr, struct input_event*);
 static void Event_Abs_MT(InputInfoPtr, struct input_event*);
 static void SemiMtSetAbsPressure(InputInfoPtr, struct input_event*);
-
+static void Event_Sync_Touch_Count(InputInfoPtr);
 
 /**
  * Helper functions
@@ -50,6 +51,18 @@ static inline Bool
 TestBit(int bit, unsigned long* array)
 {
     return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
+}
+
+/* TODO(cywang): Merge with Bit_Assign() function. */
+
+static inline void
+AssignBit(unsigned long* array, int bit, int value)
+{
+    unsigned long mask = (1L << (bit % LONG_BITS));
+    if (value)
+        array[bit / LONG_BITS] |= mask;
+    else
+        array[bit / LONG_BITS] &= ~mask;
 }
 
 /**
@@ -124,11 +137,11 @@ Event_Get_T5R2(InputInfoPtr info)
     EventStatePtr evstate = &cmt->evstate;
     if (Event_Get_Semi_MT(info))
         return 0;
-    return (Event_Get_Touch_Count(info) > evstate->slot_count);
+    return (Event_Get_Touch_Count_Max(info) > evstate->slot_count);
 }
 
 int
-Event_Get_Touch_Count(InputInfoPtr info)
+Event_Get_Touch_Count_Max(InputInfoPtr info)
 {
     CmtDevicePtr cmt = info->private;
 
@@ -141,6 +154,35 @@ Event_Get_Touch_Count(InputInfoPtr info)
     if (TestBit(BTN_TOOL_DOUBLETAP, cmt->key_bitmask))
         return 2;
     return 1;
+}
+
+static void
+Event_Sync_Touch_Count(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    int len = sizeof(cmt->key_state_bitmask);
+
+    memset(cmt->key_state_bitmask, 0, len);
+    if (ioctl(info->fd, EVIOCGKEY(len), cmt->key_state_bitmask) < 0)
+        ERR(info, "ioctl EVIOCGKEY failed: %s\n", strerror(errno));
+}
+
+int
+Event_Get_Touch_Count(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+
+    if (TestBit(BTN_TOOL_QUINTTAP, cmt->key_state_bitmask))
+        return 5;
+    if (TestBit(BTN_TOOL_QUADTAP, cmt->key_state_bitmask))
+        return 4;
+    if (TestBit(BTN_TOOL_TRIPLETAP, cmt->key_state_bitmask))
+        return 3;
+    if (TestBit(BTN_TOOL_DOUBLETAP, cmt->key_state_bitmask))
+        return 2;
+    if (TestBit(BTN_TOOL_FINGER, cmt->key_state_bitmask))
+        return 1;
+    return 0;
 }
 
 int
@@ -368,6 +410,7 @@ Event_Init(InputInfoPtr info)
      * TODO(djkurtz): probe driver for current MT slot states when supported
      * by kernel input subsystem.
      */
+    Event_Sync_Touch_Count(info);
 
     return Success;
 
@@ -564,38 +607,12 @@ Event_Key(InputInfoPtr info, struct input_event* ev)
         evstate->buttons = Bit_Assign(evstate->buttons, BUTTON_MIDDLE, value);
         break;
     case BTN_TOUCH:
-        if (value == 0)
-            evstate->touch_cnt = 0;
-        break;
     case BTN_TOOL_FINGER:
-        if (value)
-            evstate->touch_cnt = 1;
-        else if (evstate->touch_cnt == 1)
-            evstate->touch_cnt = 0;
-        break;
     case BTN_TOOL_DOUBLETAP:
-        if (value)
-            evstate->touch_cnt = 2;
-        else if (evstate->touch_cnt == 2)
-            evstate->touch_cnt = 0;
-        break;
     case BTN_TOOL_TRIPLETAP:
-        if (value)
-            evstate->touch_cnt = 3;
-        else if (evstate->touch_cnt == 3)
-            evstate->touch_cnt = 0;
-        break;
     case BTN_TOOL_QUADTAP:
-        if (value)
-            evstate->touch_cnt = 4;
-        else if (evstate->touch_cnt == 4)
-            evstate->touch_cnt = 0;
-        break;
     case BTN_TOOL_QUINTTAP:
-        if (value)
-            evstate->touch_cnt = 5;
-        else if (evstate->touch_cnt == 5)
-            evstate->touch_cnt = 0;
+        AssignBit(cmt->key_state_bitmask, ev->code, value);
         break;
     }
 }
