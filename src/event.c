@@ -279,6 +279,16 @@ Event_Type_To_String(int type) {
     }
 }
 
+static const char *
+Event_Property_To_String(int type) {
+    switch (type) {
+    case INPUT_PROP_POINTER: return "POINTER";      /* needs a pointer */
+    case INPUT_PROP_DIRECT: return "DIRECT";        /* direct input devices */
+    case INPUT_PROP_BUTTONPAD: return "BUTTONPAD";  /* has button under pad */
+    case INPUT_PROP_SEMI_MT: return "SEMI_MT";      /* touch rectangle only */
+    default: return "?";
+    }
+}
 
 /**
  * Probe Device Input Event Support
@@ -312,7 +322,8 @@ Event_Init(InputInfoPtr info)
     }
     for (i = 0; i < len*8; i++) {
         if (TestBit(i, cmt->prop_bitmask))
-            PROBE_DBG(info, "Has Property %d\n", i);
+            PROBE_DBG(info, "Has Property: %d (%s)\n", i,
+                      Event_Property_To_String(i));
     }
 
     len = ioctl(info->fd, EVIOCGBIT(0, sizeof(cmt->bitmask)), cmt->bitmask);
