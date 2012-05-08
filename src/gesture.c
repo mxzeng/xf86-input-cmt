@@ -193,7 +193,6 @@ static void Gesture_Gesture_Ready(void* client_data,
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
-    CmtPropertiesPtr props = &cmt->props;
     int hscroll, vscroll;
     unsigned int start, end;
     unsigned int vx, vy;
