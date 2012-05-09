@@ -194,3 +194,16 @@ MT_Print_Slots(InputInfoPtr info)
         MT_Slot_Print(info, slot);
     }
 }
+
+void
+MT_Slot_Sync(InputInfoPtr info, MTSlotInfoPtr slot_info)
+{
+    CmtDevicePtr cmt = info->private;
+    EventStatePtr evstate = &cmt->evstate;
+    int i;
+
+    for (i = 0; i < evstate->slot_count; i++) {
+        MtSlotPtr slot = &evstate->slots[i - evstate->slot_min];
+        MT_Slot_Value_Set(slot, slot_info->code, slot_info->values[i]);
+    }
+}

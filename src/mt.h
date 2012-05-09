@@ -24,6 +24,12 @@
 #define IS_ABS_MT(c)        (((c) >= _ABS_MT_FIRST) && ((c) <= _ABS_MT_LAST))
 #define MT_CODE(c)          ((c) - _ABS_MT_FIRST)
 
+#define MAX_SLOT_COUNT  64
+
+typedef struct {
+    unsigned code;
+    int values[MAX_SLOT_COUNT];
+} MTSlotInfo, *MTSlotInfoPtr;
 
 typedef struct {
     int touch_major;        /* Major axis of touching ellipse */
@@ -48,5 +54,7 @@ void MT_Slot_Set(InputInfoPtr, int);
 
 int MT_Slot_Value_Get(MtSlotPtr, int);
 void MT_Slot_Value_Set(MtSlotPtr, int, int);
+
+void MT_Slot_Sync(InputInfoPtr, MTSlotInfoPtr);
 
 #endif

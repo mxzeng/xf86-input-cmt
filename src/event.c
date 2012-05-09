@@ -31,13 +31,6 @@
 #define SYN_DROPPED  3
 #endif
 
-#define MAX_SLOT_COUNT  64
-
-typedef struct {
-    unsigned code;
-    int values[MAX_SLOT_COUNT];
-} MTSlotInfo;
-
 static inline void AssignBit(unsigned long*, int, int);
 static inline Bool TestBit(int, unsigned long*);
 
@@ -534,13 +527,7 @@ Event_Sync_State(InputInfoPtr info)
                 strerror(errno));
             continue;
         }
-        for (j = 0; j < evstate->slot_count; j++) {
-            struct input_event ev;
-            MT_Slot_Set(info, j);
-            ev.code = req.code;
-            ev.value = req.values[j];
-            Event_Abs(info, &ev);
-        }
+        MT_Slot_Sync(info, &req);
     }
 
     /* Get current slot id */
