@@ -449,11 +449,9 @@ Event_Open(InputInfoPtr info)
 
     /* Select monotonic input event timestamps, if supported by kernel */
     cmt->is_monotonic = (Event_Enable_Monotonic(info) == Success);
-    if (cmt->is_monotonic) {
-        /* Reset the sync time variables */
-        Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
-        Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
-    }
+    /* Reset the sync time variables */
+    Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
+    Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
     xf86IDrvMsg(info, X_PROBED, "Using %s input event time stamps\n",
                 cmt->is_monotonic ? "monotonic" : "realtime");
 }
