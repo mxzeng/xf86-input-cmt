@@ -275,6 +275,9 @@ static void Gesture_Gesture_Ready(void* client_data,
             xf86PostButtonEvent(dev, TRUE, button, 1, 0, 0, start, end);
             xf86PostButtonEvent(dev, TRUE, button, 0, 0, 0, start, end);
             break;
+        default:
+            ERR(info, "Unrecognized gesture type (%u)\n", gesture->type);
+            break;
     }
 }
 
