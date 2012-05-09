@@ -56,6 +56,6 @@ int Event_Get_T5R2(InputInfoPtr);
 int Event_Get_Touch_Count(InputInfoPtr);
 int Event_Get_Touch_Count_Max(InputInfoPtr);
 int Event_Get_Slot_Count(InputInfoPtr);
-void Event_Sync_State(InputInfoPtr info);
+void Event_Sync_State(InputInfoPtr);
 
 #endif

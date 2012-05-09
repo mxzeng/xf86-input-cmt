@@ -521,14 +521,19 @@ Event_Sync_State(InputInfoPtr info)
         int j;
         MTSlotInfo req;
 
+        if (!TestBit(i, cmt->abs_bitmask))
+            continue;
         /*
          * TODO(cywang): Scale the size of slots in MTSlotInfo based on the
          *    evstate->slot_count.
          */
 
         req.code = i;
-        if (ioctl(info->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0)
-          continue;
+        if (ioctl(info->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
+            ERR(info, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n", i,
+                strerror(errno));
+            continue;
+        }
         for (j = 0; j < evstate->slot_count; j++) {
             struct input_event ev;
             MT_Slot_Set(info, j);
@@ -540,11 +545,10 @@ Event_Sync_State(InputInfoPtr info)
 
     /* Get current slot id */
     absinfo = &cmt->absinfo[ABS_MT_SLOT];
-    if (ioctl(info->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0) {
+    if (ioctl(info->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0)
         ERR(info, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n", strerror(errno));
-    } else {
+    else
         MT_Slot_Set(info, absinfo->value);
-    }
 
     Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
     xf86IDrvMsg(info, X_PROBED,
