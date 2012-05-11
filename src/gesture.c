@@ -240,7 +240,6 @@ static void Gesture_Gesture_Ready(void* client_data,
 {
     DeviceIntPtr dev = client_data;
     InputInfoPtr info = dev->public.devicePrivate;
-    CmtDevicePtr cmt = info->private;
     ValuatorMask *mask = NULL;
     int button;
 

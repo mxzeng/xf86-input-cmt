@@ -487,7 +487,6 @@ Event_Sync_State(InputInfoPtr info)
     int i;
     struct input_absinfo* absinfo;
     CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
 
     Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
 
@@ -511,7 +510,6 @@ Event_Sync_State(InputInfoPtr info)
 
     /* Get current MT information for each slot */
     for (i = _ABS_MT_FIRST; i <= _ABS_MT_LAST; i++) {
-        int j;
         MTSlotInfo req;
 
         if (!TestBit(i, cmt->abs_bitmask))
