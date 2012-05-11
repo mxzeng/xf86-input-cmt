@@ -15,9 +15,6 @@
 
 #include "mt.h"
 
-#define BUTTON_LEFT                 0x01
-#define BUTTON_RIGHT                0x02
-#define BUTTON_MIDDLE               0x04
 
 /* 1 MiB debug buffer of struct input_event objects */
 #define DEBUG_BUF_SIZE      65536
@@ -29,9 +26,6 @@ typedef struct {
     MtSlotPtr slot_current;
 
     struct input_absinfo* mt_axes[_ABS_MT_CNT];
-
-    unsigned long buttons;
-    unsigned touch_cnt;
 
     /* Log of recent input_event structs for debugging */
     struct input_event debug_buf[DEBUG_BUF_SIZE];
@@ -56,6 +50,9 @@ int Event_Get_T5R2(InputInfoPtr);
 int Event_Get_Touch_Count(InputInfoPtr);
 int Event_Get_Touch_Count_Max(InputInfoPtr);
 int Event_Get_Slot_Count(InputInfoPtr);
+int Event_Get_Button_Left(InputInfoPtr);
+int Event_Get_Button_Middle(InputInfoPtr);
+int Event_Get_Button_Right(InputInfoPtr);
 void Event_Sync_State(InputInfoPtr);
 
 #endif

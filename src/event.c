@@ -196,6 +196,27 @@ Event_Get_Slot_Count(InputInfoPtr info)
     return evstate->slot_count;
 }
 
+int
+Event_Get_Button_Left(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(BTN_LEFT, cmt->key_state_bitmask);
+}
+
+int
+Event_Get_Button_Middle(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(BTN_MIDDLE, cmt->key_state_bitmask);
+}
+
+int
+Event_Get_Button_Right(InputInfoPtr info)
+{
+    CmtDevicePtr cmt = info->private;
+    return TestBit(BTN_RIGHT, cmt->key_state_bitmask);
+}
+
 static int
 Event_Enable_Monotonic(InputInfoPtr info)
 {
@@ -689,28 +710,7 @@ static void
 Event_Key(InputInfoPtr info, struct input_event* ev)
 {
     CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
-    unsigned value = ev->value;
-
-    switch (ev->code) {
-    case BTN_LEFT:
-        AssignBit(&evstate->buttons, BUTTON_LEFT, value);
-        break;
-    case BTN_RIGHT:
-        AssignBit(&evstate->buttons, BUTTON_RIGHT, value);
-        break;
-    case BTN_MIDDLE:
-        AssignBit(&evstate->buttons, BUTTON_MIDDLE, value);
-        break;
-    case BTN_TOUCH:
-    case BTN_TOOL_FINGER:
-    case BTN_TOOL_DOUBLETAP:
-    case BTN_TOOL_TRIPLETAP:
-    case BTN_TOOL_QUADTAP:
-    case BTN_TOOL_QUINTTAP:
-        AssignBit(cmt->key_state_bitmask, ev->code, value);
-        break;
-    }
+    AssignBit(cmt->key_state_bitmask, ev->code, ev->value);
 }
 
 static void

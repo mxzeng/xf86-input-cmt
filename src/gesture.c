@@ -14,8 +14,6 @@
 #include "cmt.h"
 #include "properties.h"
 
-static unsigned MT_XButtons_To_Gestures_Buttons(unsigned long);
-
 /*
  * Gestures timer functions
  */
@@ -131,19 +129,6 @@ Gesture_Device_Close(GesturePtr rec)
     GestureInterpreterSetTimerProvider(rec->interpreter, NULL, NULL);
 }
 
-static unsigned
-MT_XButtons_To_Gestures_Buttons(unsigned long xbuttons)
-{
-    unsigned ret = 0;
-    if (xbuttons & BUTTON_LEFT)
-        ret |= GESTURES_BUTTON_LEFT;
-    if (xbuttons & BUTTON_MIDDLE)
-        ret |= GESTURES_BUTTON_MIDDLE;
-    if (xbuttons & BUTTON_RIGHT)
-        ret |= GESTURES_BUTTON_RIGHT;
-    return ret;
-}
-
 void
 Gesture_Process_Slots(GesturePtr rec,
                       EventStatePtr evstate,
@@ -180,7 +165,12 @@ Gesture_Process_Slots(GesturePtr rec,
         current_finger++;
     }
     hwstate.timestamp = StimeFromTimeval(tv);
-    hwstate.buttons_down = MT_XButtons_To_Gestures_Buttons(evstate->buttons);
+    if (Event_Get_Button_Left(info))
+        hwstate.buttons_down |= GESTURES_BUTTON_LEFT;
+    if (Event_Get_Button_Middle(info))
+        hwstate.buttons_down |= GESTURES_BUTTON_MIDDLE;
+    if (Event_Get_Button_Right(info))
+        hwstate.buttons_down |= GESTURES_BUTTON_RIGHT;
     hwstate.touch_cnt = Event_Get_Touch_Count(info);
     hwstate.finger_cnt = current_finger;
     hwstate.fingers = rec->fingers;
