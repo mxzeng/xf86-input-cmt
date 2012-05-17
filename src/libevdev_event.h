@@ -8,16 +8,13 @@
 #ifndef _LIBEVDEV_EVENT_H_
 #define _LIBEVDEV_EVENT_H_
 
-#include <linux/input.h>
-
-#include <xorg-server.h>
-#include <xf86Xinput.h>
-
+#include "libevdev_log.h"
 #include "libevdev_mt.h"
 
 
 /* 1 MiB debug buffer of struct input_event objects */
 #define DEBUG_BUF_SIZE      65536
+
 
 typedef struct {
     int slot_min;
@@ -32,27 +29,27 @@ typedef struct {
     size_t debug_buf_tail;
 } EventStateRec, *EventStatePtr;
 
-int Event_Init(InputInfoPtr);
-void Event_Free(InputInfoPtr);
-void Event_Open(InputInfoPtr);
-Bool Event_Process(InputInfoPtr, struct input_event*);
+int Event_Init(EvDevicePtr);
+void Event_Free(EvDevicePtr);
+void Event_Open(EvDevicePtr);
+bool Event_Process(EvDevicePtr, struct input_event*);
 void Event_Dump_Debug_Log(void *);
 
-int Event_Get_Left(InputInfoPtr);
-int Event_Get_Right(InputInfoPtr);
-int Event_Get_Top(InputInfoPtr);
-int Event_Get_Bottom(InputInfoPtr);
-int Event_Get_Res_Y(InputInfoPtr);
-int Event_Get_Res_X(InputInfoPtr);
-int Event_Get_Button_Pad(InputInfoPtr);
-int Event_Get_Semi_MT(InputInfoPtr);
-int Event_Get_T5R2(InputInfoPtr);
-int Event_Get_Touch_Count(InputInfoPtr);
-int Event_Get_Touch_Count_Max(InputInfoPtr);
-int Event_Get_Slot_Count(InputInfoPtr);
-int Event_Get_Button_Left(InputInfoPtr);
-int Event_Get_Button_Middle(InputInfoPtr);
-int Event_Get_Button_Right(InputInfoPtr);
-void Event_Sync_State(InputInfoPtr);
+int Event_Get_Left(EvDevicePtr);
+int Event_Get_Right(EvDevicePtr);
+int Event_Get_Top(EvDevicePtr);
+int Event_Get_Bottom(EvDevicePtr);
+int Event_Get_Res_Y(EvDevicePtr);
+int Event_Get_Res_X(EvDevicePtr);
+int Event_Get_Button_Pad(EvDevicePtr);
+int Event_Get_Semi_MT(EvDevicePtr);
+int Event_Get_T5R2(EvDevicePtr);
+int Event_Get_Touch_Count(EvDevicePtr);
+int Event_Get_Touch_Count_Max(EvDevicePtr);
+int Event_Get_Slot_Count(EvDevicePtr);
+int Event_Get_Button_Left(EvDevicePtr);
+int Event_Get_Button_Middle(EvDevicePtr);
+int Event_Get_Button_Right(EvDevicePtr);
+void Event_Sync_State(EvDevicePtr);
 
 #endif

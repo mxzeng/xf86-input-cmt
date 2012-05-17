@@ -81,6 +81,7 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     CmtPropertiesPtr props = &cmt->props;
     EventStatePtr evstate = &cmt->evstate;
     struct HardwareProperties hwprops;
+    EvDevicePtr evdev = &cmt->evdev;
 
     /* Store the device for which to generate gestures */
     rec->dev = dev;
@@ -95,11 +96,11 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     hwprops.screen_x_dpi    = 133;
     hwprops.screen_y_dpi    = 133;
     hwprops.max_finger_cnt  = evstate->slot_count;
-    hwprops.max_touch_cnt   = Event_Get_Touch_Count_Max(info);
-    hwprops.supports_t5r2   = Event_Get_T5R2(info);
-    hwprops.support_semi_mt = Event_Get_Semi_MT(info);
+    hwprops.max_touch_cnt   = Event_Get_Touch_Count_Max(evdev);
+    hwprops.supports_t5r2   = Event_Get_T5R2(evdev);
+    hwprops.support_semi_mt = Event_Get_Semi_MT(evdev);
     /* buttonpad means a physical button under the touch surface */
-    hwprops.is_button_pad   = Event_Get_Button_Pad(info);
+    hwprops.is_button_pad   = Event_Get_Button_Pad(evdev);
 
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
     GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
@@ -130,12 +131,15 @@ Gesture_Device_Close(GesturePtr rec)
 }
 
 void
-Gesture_Process_Slots(GesturePtr rec,
+Gesture_Process_Slots(void* vrec,
                       EventStatePtr evstate,
                       struct timeval* tv)
 {
+    GesturePtr rec = vrec;
     DeviceIntPtr dev = rec->dev;
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+    EvDevicePtr evdev = &cmt->evdev;
     int i;
     MtSlotPtr slot;
     struct HardwareState hwstate = { 0 };
@@ -146,7 +150,7 @@ Gesture_Process_Slots(GesturePtr rec,
 
     /* zero initialize all FingerStates to clear out previous state. */
     memset(rec->fingers, 0,
-           Event_Get_Slot_Count(info) * sizeof(struct FingerState));
+           Event_Get_Slot_Count(evdev) * sizeof(struct FingerState));
 
     current_finger = 0;
     for (i = 0; i < evstate->slot_count; i++) {
@@ -165,13 +169,13 @@ Gesture_Process_Slots(GesturePtr rec,
         current_finger++;
     }
     hwstate.timestamp = StimeFromTimeval(tv);
-    if (Event_Get_Button_Left(info))
+    if (Event_Get_Button_Left(evdev))
         hwstate.buttons_down |= GESTURES_BUTTON_LEFT;
-    if (Event_Get_Button_Middle(info))
+    if (Event_Get_Button_Middle(evdev))
         hwstate.buttons_down |= GESTURES_BUTTON_MIDDLE;
-    if (Event_Get_Button_Right(info))
+    if (Event_Get_Button_Right(evdev))
         hwstate.buttons_down |= GESTURES_BUTTON_RIGHT;
-    hwstate.touch_cnt = Event_Get_Touch_Count(info);
+    hwstate.touch_cnt = Event_Get_Touch_Count(evdev);
     hwstate.finger_cnt = current_finger;
     hwstate.fingers = rec->fingers;
     GestureInterpreterPushHardwareState(rec->interpreter, &hwstate);
@@ -320,7 +324,7 @@ Gesture_TimerCreate(void* provider_data)
         free(timer);
         return NULL;
     }
-    timer->is_monotonic = cmt->is_monotonic;
+    timer->is_monotonic = cmt->evdev.is_monotonic;
     return timer;
 }
 

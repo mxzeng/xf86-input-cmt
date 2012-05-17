@@ -50,6 +50,6 @@ void Gesture_Device_Close(GesturePtr);
 /*
  * Sends the current hardware state to the Gestures library.
  */
-void Gesture_Process_Slots(GesturePtr, EventStatePtr, struct timeval*);
+void Gesture_Process_Slots(void*, EventStatePtr, struct timeval*);
 
 #endif

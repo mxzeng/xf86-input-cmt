@@ -14,7 +14,6 @@
 
 #include "cmt.h"
 #include "cmt-properties.h"
-#include "event.h"
 
 typedef enum PropType {
     PropTypeInt,
@@ -112,34 +111,36 @@ PropertiesInit(DeviceIntPtr dev)
 
     /* Read Only properties */
     PropCreate_String(dev, XI_PROP_DEVICE_NODE, NULL, cmt->device);
-    PropCreate_Short(dev, XI_PROP_VENDOR_ID, NULL, cmt->id.vendor);
-    PropCreate_Short(dev, XI_PROP_PRODUCT_ID, NULL, cmt->id.product);
+    PropCreate_Short(dev, XI_PROP_VENDOR_ID, NULL, cmt->evdev.id.vendor);
+    PropCreate_Short(dev, XI_PROP_PRODUCT_ID, NULL, cmt->evdev.id.product);
 
     /*
      * Useable trackpad area. If not configured in .conf file,
      * use x/y valuator min/max as reported by kernel driver.
      */
     PropCreate_Int(dev, CMT_PROP_AREA_LEFT, &props->area_left,
-                   Event_Get_Left(info));
+                   Event_Get_Left(&cmt->evdev));
     PropCreate_Int(dev, CMT_PROP_AREA_RIGHT, &props->area_right,
-                   Event_Get_Right(info));
+                   Event_Get_Right(&cmt->evdev));
     PropCreate_Int(dev, CMT_PROP_AREA_TOP, &props->area_top,
-                   Event_Get_Top(info));
+                   Event_Get_Top(&cmt->evdev));
     PropCreate_Int(dev, CMT_PROP_AREA_BOTTOM, &props->area_bottom,
-                   Event_Get_Bottom(info));
+                   Event_Get_Bottom(&cmt->evdev));
 
     /*
      * Trackpad resolution (pixels/mm). If not configured in .conf file,
      * use x/y resolution as reported by kernel driver.
      */
-    PropCreate_Int(dev, CMT_PROP_RES_Y, &props->res_y, Event_Get_Res_Y(info));
-    PropCreate_Int(dev, CMT_PROP_RES_X, &props->res_x, Event_Get_Res_X(info));
+    PropCreate_Int(dev, CMT_PROP_RES_Y, &props->res_y,
+                   Event_Get_Res_Y(&cmt->evdev));
+    PropCreate_Int(dev, CMT_PROP_RES_X, &props->res_x,
+                   Event_Get_Res_X(&cmt->evdev));
 
     dump_debug_log_prop = PropCreate_Bool(dev,
                                           CMT_PROP_DUMP_DEBUG_LOG,
                                           &props->dump_debug_log,
                                           FALSE);
-    Prop_RegisterHandlers(dev, dump_debug_log_prop, info, NULL,
+    Prop_RegisterHandlers(dev, dump_debug_log_prop, &cmt->evdev, NULL,
                           Event_Dump_Debug_Log);
 
     return Success;

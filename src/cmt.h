@@ -9,18 +9,11 @@
 
 #include <linux/input.h>
 
-#include <gestures/gestures.h>
+#include <gesture.h>
+#include <properties.h>
+#include "libevdev.h"
 
-#include <xorg-server.h>
-#include <xf86.h>
-
-#include "gesture.h"
-#include "libevdev_event.h"
-#include "properties.h"
-
-/* Message Log Verbosity for debug messages */
-#define DBG_VERB    7
-
+#define DBG_VERB 7
 #define DBG(info, format, ...) \
     xf86IDrvMsgVerb((info), X_INFO, DBG_VERB, "%s():%d: " format, \
         __FUNCTION__, __LINE__, ##__VA_ARGS__)
@@ -35,7 +28,6 @@
 
 #define ERR(info, ...) \
         xf86IDrvMsg((info), X_ERROR, ##__VA_ARGS__)
-
 
 #define LONG_BITS (sizeof(long) * 8)
 
@@ -77,24 +69,10 @@ typedef struct {
     EventStateRec evstate;
     GestureRec gesture;
     GesturesProp* prop_list;
+    EvDevice evdev;
 
     char* device;
     long  handlers;
-
-    /* kernel driver information */
-    struct input_id id;
-    char name[1024];
-    unsigned long bitmask[NLONGS(EV_CNT)];
-    unsigned long key_bitmask[NLONGS(KEY_CNT)];
-    unsigned long key_state_bitmask[NLONGS(KEY_CNT)];
-    unsigned long rel_bitmask[NLONGS(REL_CNT)];
-    unsigned long abs_bitmask[NLONGS(ABS_CNT)];
-    unsigned long led_bitmask[NLONGS(LED_CNT)];
-    struct input_absinfo absinfo[ABS_CNT];
-    unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
-    int is_monotonic:1;
-    struct timeval before_sync_time;
-    struct timeval after_sync_time;
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif

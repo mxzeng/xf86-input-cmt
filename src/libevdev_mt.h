@@ -8,10 +8,7 @@
 #ifndef _LIBEVDEV_MT_H_
 #define _LIBEVDEV_MT_H_
 
-#include <linux/input.h>
-
-#include <xorg-server.h>
-#include <xf86Xinput.h>
+#include "libevdev_log.h"
 
 /*
  * From include/linux/input.h
@@ -46,15 +43,15 @@ typedef struct {
     int distance;           /* Contact hover distance */
 } MtSlotRec, *MtSlotPtr;
 
-int MTB_Init(InputInfoPtr, int, int, int);
-void MT_Free(InputInfoPtr);
+int MTB_Init(EvDevicePtr, int, int, int);
+void MT_Free(EvDevicePtr);
 
-void MT_Print_Slots(InputInfoPtr);
-void MT_Slot_Set(InputInfoPtr, int);
+void MT_Print_Slots(EvDevicePtr);
+void MT_Slot_Set(EvDevicePtr, int);
 
 int MT_Slot_Value_Get(MtSlotPtr, int);
 void MT_Slot_Value_Set(MtSlotPtr, int, int);
 
-void MT_Slot_Sync(InputInfoPtr, MTSlotInfoPtr);
+void MT_Slot_Sync(EvDevicePtr, MTSlotInfoPtr);
 
 #endif

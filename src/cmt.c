@@ -21,7 +21,6 @@
 #include <xf86_OSproc.h>
 #include <xserver-properties.h>
 
-#include "libevdev_event.h"
 #include "properties.h"
 
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12
@@ -66,6 +65,32 @@ static Bool DeviceClose(DeviceIntPtr);
 static Bool OpenDevice(InputInfoPtr);
 static int InitializeXDevice(DeviceIntPtr dev);
 
+static void libevdev_log_x(void* udata, int level, const char* format, ...);
+
+/*
+ * Implementation of log method for libevdev
+ */
+static void libevdev_log_x(void* udata, int level, const char* format, ...) {
+  InputInfoPtr info = udata;
+  int verb;
+  int type;
+
+  va_list args;
+  va_start(args, format);
+  if (level == LOGLEVEL_DEBUG) {
+    type = X_INFO;
+    verb = DBG_VERB;
+  } else if (level == LOGLEVEL_WARNING) {
+    type = X_WARNING;
+    verb = -1;
+  } else {
+    type = X_ERROR;
+    verb = -1;
+  }
+  xf86VIDrvMsgVerb(info, type, verb, format, args);
+  va_end(args);
+}
+
 /**
  * X Input driver information and PreInit / UnInit routines
  */
@@ -99,33 +124,46 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     info->private                 = cmt;
     info->fd                      = -1;
 
+    cmt->evdev.log = &libevdev_log_x;
+    cmt->evdev.log_udata = info;
+    cmt->evdev.fd = info->fd;
+    cmt->evdev.evstate = &cmt->evstate;
+    cmt->evdev.syn_report = &Gesture_Process_Slots;
+    cmt->evdev.syn_report_udata = &cmt->gesture;
+
     rc = OpenDevice(info);
     if (rc != Success)
         goto Error_OpenDevice;
 
-    rc = Event_Init(info);
-    if (rc != Success)
+    rc = Event_Init(&cmt->evdev);
+    if (rc != Success) {
+        if (rc == ENOMEM) {
+            rc = BadAlloc;
+        }
         goto Error_Event_Init;
+    }
 
     xf86ProcessCommonOptions(info, info->options);
 
     if (info->fd >= 0) {
         close(info->fd);
         info->fd = -1;
+        cmt->evdev.fd = info->fd;
     }
 
-    rc = Gesture_Init(&cmt->gesture, Event_Get_Slot_Count(info));
+    rc = Gesture_Init(&cmt->gesture, Event_Get_Slot_Count(&cmt->evdev));
     if (rc != Success)
         goto Error_Gesture_Init;
 
     return Success;
 
 Error_Gesture_Init:
-    Event_Free(info);
+    Event_Free(&cmt->evdev);
 Error_Event_Init:
     if (info->fd >= 0) {
         close(info->fd);
         info->fd = -1;
+        cmt->evdev.fd = info->fd;
     }
 Error_OpenDevice:
     free(cmt);
@@ -141,14 +179,14 @@ UnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (!info)
         return;
 
+    cmt = info->private;
     DBG(info, "UnInit\n");
 
-    cmt = info->private;
     if (cmt) {
         Gesture_Free(&cmt->gesture);
         free(cmt->device);
         cmt->device = NULL;
-        Event_Free(info);
+        Event_Free(&cmt->evdev);
         free(cmt);
         info->private = NULL;
     }
@@ -194,6 +232,7 @@ ReadInput(InputInfoPtr info)
                 xf86RemoveEnabledDevice(info);
                 close(info->fd);
                 info->fd = -1;
+                cmt->evdev.fd = info->fd;
             } else if (errno != EAGAIN) {
                 ERR(info, "Read error: %s\n", strerror(errno));
             }
@@ -210,12 +249,12 @@ ReadInput(InputInfoPtr info)
         for (i = 0; i < len/sizeof(ev[0]); i++) {
             if (sync_evdev_state)
                 break;
-            if (timercmp(&ev[i].time, &cmt->before_sync_time, <)) {
+            if (timercmp(&ev[i].time, &cmt->evdev.before_sync_time, <)) {
                 /* Ignore events before last sync time */
                 continue;
-            } else if (timercmp(&ev[i].time, &cmt->after_sync_time, >)) {
+            } else if (timercmp(&ev[i].time, &cmt->evdev.after_sync_time, >)) {
                 /* Event_Process returns TRUE if SYN_DROPPED detected */
-                sync_evdev_state = Event_Process(info, &ev[i]);
+                sync_evdev_state = Event_Process(&cmt->evdev, &ev[i]);
             } else {
                 /* If the event occurred during sync, then sync again */
                 sync_evdev_state = TRUE;
@@ -226,7 +265,7 @@ ReadInput(InputInfoPtr info)
     /* Keep reading if kernel supplied NUM_EVENTS events. */
 
     if (sync_evdev_state)
-        Event_Sync_State(info);
+        Event_Sync_State(&cmt->evdev);
 }
 
 /**
@@ -265,7 +304,7 @@ DeviceOn(DeviceIntPtr dev)
     rc = OpenDevice(info);
     if (rc != Success)
         return rc;
-    Event_Open(info);
+    Event_Open(&cmt->evdev);
 
     xf86FlushInput(info->fd);
     xf86AddEnabledDevice(info);
@@ -288,6 +327,7 @@ DeviceOff(DeviceIntPtr dev)
         xf86RemoveEnabledDevice(info);
         close(info->fd);
         info->fd = -1;
+        cmt->evdev.fd = info->fd;
     }
     return Success;
 }
@@ -328,6 +368,7 @@ OpenDevice(InputInfoPtr info)
         do {
             info->fd = open(cmt->device, O_RDWR | O_NONBLOCK, 0);
         } while (info->fd < 0 && errno == EINTR);
+        cmt->evdev.fd = info->fd;
 
         if (info->fd < 0) {
             ERR(info, "Cannot open \"%s\".\n", cmt->device);

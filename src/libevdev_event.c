@@ -8,10 +8,10 @@
 
 #include <errno.h>
 #include <linux/input.h>
+#include <stdbool.h>
 #include <time.h>
 
-#include "cmt.h"
-#include "libevdev_mt.h"
+#include "libevdev.h"
 
 #ifndef BTN_TOOL_QUINTTAP
 #define BTN_TOOL_QUINTTAP  0x148  /* Five fingers on trackpad */
@@ -32,27 +32,27 @@
 #endif
 
 static inline void AssignBit(unsigned long*, int, int);
-static inline Bool TestBit(int, unsigned long*);
+static inline bool TestBit(int, unsigned long*);
 
-static void Absinfo_Print(InputInfoPtr, struct input_absinfo*);
-static void Event_Print(InputInfoPtr, struct input_event*);
+static void Absinfo_Print(EvDevicePtr device, struct input_absinfo*);
+static void Event_Print(EvDevicePtr, struct input_event*);
 
-static void Event_Syn(InputInfoPtr, struct input_event*);
-static void Event_Syn_Report(InputInfoPtr, struct input_event*);
-static void Event_Syn_MT_Report(InputInfoPtr, struct input_event*);
+static void Event_Syn(EvDevicePtr, struct input_event*);
+static void Event_Syn_Report(EvDevicePtr, struct input_event*);
+static void Event_Syn_MT_Report(EvDevicePtr, struct input_event*);
 
-static void Event_Key(InputInfoPtr, struct input_event*);
+static void Event_Key(EvDevicePtr, struct input_event*);
 
-static void Event_Abs(InputInfoPtr, struct input_event*);
-static void Event_Abs_MT(InputInfoPtr, struct input_event*);
-static void SemiMtSetAbsPressure(InputInfoPtr, struct input_event*);
-static void Event_Sync_Keys(InputInfoPtr);
-static void Event_Get_Time(struct timeval*, Bool);
+static void Event_Abs(EvDevicePtr, struct input_event*);
+static void Event_Abs_MT(EvDevicePtr, struct input_event*);
+static void SemiMtSetAbsPressure(EvDevicePtr, struct input_event*);
+static void Event_Sync_Keys(EvDevicePtr);
+static void Event_Get_Time(struct timeval*, bool);
 
 /**
  * Helper functions
  */
-static inline Bool
+static inline bool
 TestBit(int bit, unsigned long* array)
 {
     return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
@@ -72,156 +72,140 @@ AssignBit(unsigned long* array, int bit, int value)
  * Input Device Event Property accessors
  */
 int
-Event_Get_Left(InputInfoPtr info)
+Event_Get_Left(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_X];
     return absinfo->minimum;
 }
 
 int
-Event_Get_Right(InputInfoPtr info)
+Event_Get_Right(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_X];
     return absinfo->maximum;
 }
 
 int
-Event_Get_Top(InputInfoPtr info)
+Event_Get_Top(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_Y];
     return absinfo->minimum;
 }
 
 int
-Event_Get_Bottom(InputInfoPtr info)
+Event_Get_Bottom(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_Y];
     return absinfo->maximum;
 }
 
 int
-Event_Get_Res_Y(InputInfoPtr info)
+Event_Get_Res_Y(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_Y];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_Y];
     return absinfo->resolution;
 }
 
 int
-Event_Get_Res_X(InputInfoPtr info)
+Event_Get_Res_X(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    struct input_absinfo* absinfo = &cmt->absinfo[ABS_X];
+    struct input_absinfo* absinfo = &device->absinfo[ABS_X];
     return absinfo->resolution;
 }
 
 int
-Event_Get_Button_Pad(InputInfoPtr info)
+Event_Get_Button_Pad(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    return TestBit(INPUT_PROP_BUTTONPAD, cmt->prop_bitmask);
+    return TestBit(INPUT_PROP_BUTTONPAD, device->prop_bitmask);
 }
 
 int
-Event_Get_Semi_MT(InputInfoPtr info)
+Event_Get_Semi_MT(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    return TestBit(INPUT_PROP_SEMI_MT, cmt->prop_bitmask);
+    return TestBit(INPUT_PROP_SEMI_MT, device->prop_bitmask);
 }
 
 int
-Event_Get_T5R2(InputInfoPtr info)
+Event_Get_T5R2(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
-    if (Event_Get_Semi_MT(info))
+    EventStatePtr evstate = device->evstate;
+    if (Event_Get_Semi_MT(device))
         return 0;
-    return (Event_Get_Touch_Count_Max(info) > evstate->slot_count);
+    return (Event_Get_Touch_Count_Max(device) > evstate->slot_count);
 }
 
 int
-Event_Get_Touch_Count_Max(InputInfoPtr info)
+Event_Get_Touch_Count_Max(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
 
-    if (TestBit(BTN_TOOL_QUINTTAP, cmt->key_bitmask))
+    if (TestBit(BTN_TOOL_QUINTTAP, device->key_bitmask))
         return 5;
-    if (TestBit(BTN_TOOL_QUADTAP, cmt->key_bitmask))
+    if (TestBit(BTN_TOOL_QUADTAP, device->key_bitmask))
         return 4;
-    if (TestBit(BTN_TOOL_TRIPLETAP, cmt->key_bitmask))
+    if (TestBit(BTN_TOOL_TRIPLETAP, device->key_bitmask))
         return 3;
-    if (TestBit(BTN_TOOL_DOUBLETAP, cmt->key_bitmask))
+    if (TestBit(BTN_TOOL_DOUBLETAP, device->key_bitmask))
         return 2;
     return 1;
 }
 
 static void
-Event_Sync_Keys(InputInfoPtr info)
+Event_Sync_Keys(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    int len = sizeof(cmt->key_state_bitmask);
+    int len = sizeof(device->key_state_bitmask);
 
-    memset(cmt->key_state_bitmask, 0, len);
-    if (ioctl(info->fd, EVIOCGKEY(len), cmt->key_state_bitmask) < 0)
-        ERR(info, "ioctl EVIOCGKEY failed: %s\n", strerror(errno));
+    memset(device->key_state_bitmask, 0, len);
+    if (ioctl(device->fd, EVIOCGKEY(len), device->key_state_bitmask) < 0)
+        LOG_ERROR(device, "ioctl EVIOCGKEY failed: %s\n", strerror(errno));
 }
 
 int
-Event_Get_Touch_Count(InputInfoPtr info)
+Event_Get_Touch_Count(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
 
-    if (TestBit(BTN_TOOL_QUINTTAP, cmt->key_state_bitmask))
+    if (TestBit(BTN_TOOL_QUINTTAP, device->key_state_bitmask))
         return 5;
-    if (TestBit(BTN_TOOL_QUADTAP, cmt->key_state_bitmask))
+    if (TestBit(BTN_TOOL_QUADTAP, device->key_state_bitmask))
         return 4;
-    if (TestBit(BTN_TOOL_TRIPLETAP, cmt->key_state_bitmask))
+    if (TestBit(BTN_TOOL_TRIPLETAP, device->key_state_bitmask))
         return 3;
-    if (TestBit(BTN_TOOL_DOUBLETAP, cmt->key_state_bitmask))
+    if (TestBit(BTN_TOOL_DOUBLETAP, device->key_state_bitmask))
         return 2;
-    if (TestBit(BTN_TOOL_FINGER, cmt->key_state_bitmask))
+    if (TestBit(BTN_TOOL_FINGER, device->key_state_bitmask))
         return 1;
     return 0;
 }
 
 int
-Event_Get_Slot_Count(InputInfoPtr info)
+Event_Get_Slot_Count(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
     return evstate->slot_count;
 }
 
 int
-Event_Get_Button_Left(InputInfoPtr info)
+Event_Get_Button_Left(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    return TestBit(BTN_LEFT, cmt->key_state_bitmask);
+    return TestBit(BTN_LEFT, device->key_state_bitmask);
 }
 
 int
-Event_Get_Button_Middle(InputInfoPtr info)
+Event_Get_Button_Middle(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    return TestBit(BTN_MIDDLE, cmt->key_state_bitmask);
+    return TestBit(BTN_MIDDLE, device->key_state_bitmask);
 }
 
 int
-Event_Get_Button_Right(InputInfoPtr info)
+Event_Get_Button_Right(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    return TestBit(BTN_RIGHT, cmt->key_state_bitmask);
+    return TestBit(BTN_RIGHT, device->key_state_bitmask);
 }
 
 static int
-Event_Enable_Monotonic(InputInfoPtr info)
+Event_Enable_Monotonic(EvDevicePtr device)
 {
     unsigned int clk = CLOCK_MONOTONIC;
-    return (ioctl(info->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
+    return (ioctl(device->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
 }
 
 #define CASE_RETURN(s) \
@@ -318,82 +302,86 @@ Event_Property_To_String(int type) {
  * Probe Device Input Event Support
  */
 int
-Event_Init(InputInfoPtr info)
+Event_Init(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
     int i;
     int len;
 
-    if (ioctl(info->fd, EVIOCGID, &cmt->id) < 0) {
-         ERR(info, "ioctl EVIOCGID failed: %s\n", strerror(errno));
+    if (ioctl(device->fd, EVIOCGID, &device->id) < 0) {
+         LOG_ERROR(device, "ioctl EVIOCGID failed: %s\n", strerror(errno));
          return !Success;
     }
-    xf86IDrvMsg(info, X_PROBED,
-        "vendor: %02X, product: %02X\n", cmt->id.vendor, cmt->id.product);
+    LOG_DEBUG(device, "vendor: %02X, product: %02X\n", device->id.vendor,
+              device->id.product);
 
-    if (ioctl(info->fd, EVIOCGNAME(sizeof(cmt->name) - 1), cmt->name) < 0) {
-        ERR(info, "ioctl EVIOCGNAME failed: %s\n", strerror(errno));
+    if (ioctl(device->fd, EVIOCGNAME(sizeof(device->name) - 1),
+              device->name) < 0) {
+        LOG_ERROR(device, "ioctl EVIOCGNAME failed: %s\n", strerror(errno));
         return !Success;
     }
-    xf86IDrvMsg(info, X_PROBED, "name: %s\n", cmt->name);
+    LOG_DEBUG(device, "name: %s\n", device->name);
 
-    len = ioctl(info->fd, EVIOCGPROP(sizeof(cmt->prop_bitmask)),
-                cmt->prop_bitmask);
+    len = ioctl(device->fd, EVIOCGPROP(sizeof(device->prop_bitmask)),
+                device->prop_bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGPROP failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGPROP failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
-        if (TestBit(i, cmt->prop_bitmask))
-            PROBE_DBG(info, "Has Property: %d (%s)\n", i,
+        if (TestBit(i, device->prop_bitmask))
+            LOG_DEBUG(device, "Has Property: %d (%s)\n", i,
                       Event_Property_To_String(i));
     }
 
-    len = ioctl(info->fd, EVIOCGBIT(0, sizeof(cmt->bitmask)), cmt->bitmask);
+    len = ioctl(device->fd, EVIOCGBIT(0, sizeof(device->bitmask)),
+                device->bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGBIT failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGBIT failed: %s\n", strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
-        if (TestBit(i, cmt->bitmask))
-            PROBE_DBG(info, "Has Event Type %d = %s\n", i,
+        if (TestBit(i, device->bitmask))
+            LOG_DEBUG(device, "Has Event Type %d = %s\n", i,
                       Event_Type_To_String(i));
     }
 
-    len = ioctl(info->fd, EVIOCGBIT(EV_KEY, sizeof(cmt->key_bitmask)),
-                cmt->key_bitmask);
+    len = ioctl(device->fd, EVIOCGBIT(EV_KEY, sizeof(device->key_bitmask)),
+                device->key_bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGBIT(EV_KEY) failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_KEY) failed: %s\n",
+                  strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
-        if (TestBit(i, cmt->key_bitmask))
-            PROBE_DBG(info, "Has KEY[%d] = %s\n", i,
+        if (TestBit(i, device->key_bitmask))
+            LOG_DEBUG(device, "Has KEY[%d] = %s\n", i,
                       Event_To_String(EV_KEY, i));
     }
 
-    len = ioctl(info->fd, EVIOCGBIT(EV_LED, sizeof(cmt->led_bitmask)),
-                cmt->led_bitmask);
+    len = ioctl(device->fd, EVIOCGBIT(EV_LED, sizeof(device->led_bitmask)),
+                device->led_bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGBIT(EV_LED) failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_LED) failed: %s\n",
+                  strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
-        if (TestBit(i, cmt->led_bitmask))
-            PROBE_DBG(info, "Has LED[%d] = %s\n", i,
+        if (TestBit(i, device->led_bitmask))
+            LOG_DEBUG(device, "Has LED[%d] = %s\n", i,
                       Event_To_String(EV_LED, i));
     }
 
-    len = ioctl(info->fd, EVIOCGBIT(EV_REL, sizeof(cmt->rel_bitmask)),
-                cmt->rel_bitmask);
+    len = ioctl(device->fd, EVIOCGBIT(EV_REL, sizeof(device->rel_bitmask)),
+                device->rel_bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGBIT(EV_REL) failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_REL) failed: %s\n",
+                  strerror(errno));
         return !Success;
     }
     for (i = 0; i < len*8; i++) {
-        if (TestBit(i, cmt->rel_bitmask))
-            PROBE_DBG(info, "Has REL[%d] = %s\n", i,
+        if (TestBit(i, device->rel_bitmask))
+            LOG_DEBUG(device, "Has REL[%d] = %s\n", i,
                       Event_To_String(EV_REL, i));
     }
 
@@ -404,21 +392,22 @@ Event_Init(InputInfoPtr info)
      *    probe and when we start listening for input events.
      */
 
-    len = ioctl(info->fd, EVIOCGBIT(EV_ABS, sizeof(cmt->abs_bitmask)),
-                cmt->abs_bitmask);
+    len = ioctl(device->fd, EVIOCGBIT(EV_ABS, sizeof(device->abs_bitmask)),
+                device->abs_bitmask);
     if (len < 0) {
-        ERR(info, "ioctl EVIOCGBIT(EV_ABS) failed: %s\n", strerror(errno));
+        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_ABS) failed: %s\n",
+                  strerror(errno));
         return !Success;
     }
 
     for (i = ABS_X; i <= ABS_MAX; i++) {
-        if (TestBit(i, cmt->abs_bitmask)) {
-            struct input_absinfo* absinfo = &cmt->absinfo[i];
-            PROBE_DBG(info, "Has ABS[%d] = %s\n", i,
+        if (TestBit(i, device->abs_bitmask)) {
+            struct input_absinfo* absinfo = &device->absinfo[i];
+            LOG_DEBUG(device, "Has ABS[%d] = %s\n", i,
                       Event_To_String(EV_ABS, i));
-            len = ioctl(info->fd, EVIOCGABS(i), absinfo);
+            len = ioctl(device->fd, EVIOCGABS(i), absinfo);
             if (len < 0) {
-                ERR(info, "ioctl EVIOCGABS(%d) failed: %s\n", i,
+                LOG_ERROR(device, "ioctl EVIOCGABS(%d) failed: %s\n", i,
                     strerror(errno));
                 /*
                  * Clean up in case where error happens after MTB_Init() has
@@ -427,11 +416,11 @@ Event_Init(InputInfoPtr info)
                 goto error_MT_Free;
             }
 
-            Absinfo_Print(info, absinfo);
+            Absinfo_Print(device, absinfo);
 
             if (i == ABS_MT_SLOT) {
                 int rc;
-                rc = MTB_Init(info, absinfo->minimum, absinfo->maximum,
+                rc = MTB_Init(device, absinfo->minimum, absinfo->maximum,
                               absinfo->value);
                 if (rc != Success)
                     return rc;
@@ -442,50 +431,48 @@ Event_Init(InputInfoPtr info)
     }
 
     /* Synchronize all MT slots with kernel evdev driver */
-    Event_Sync_State(info);
+    Event_Sync_State(device);
     return Success;
 
 error_MT_Free:
-    MT_Free(info);
+    MT_Free(device);
     return !Success;
 }
 
 void
-Event_Free(InputInfoPtr info)
+Event_Free(EvDevicePtr device)
 {
-    MT_Free(info);
+    MT_Free(device);
 }
 
 void
-Event_Open(InputInfoPtr info)
+Event_Open(EvDevicePtr device)
 {
-    CmtDevicePtr cmt = info->private;
-
     /* Select monotonic input event timestamps, if supported by kernel */
-    cmt->is_monotonic = (Event_Enable_Monotonic(info) == Success);
+    device->is_monotonic = (Event_Enable_Monotonic(device) == Success);
     /* Reset the sync time variables */
-    Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
-    Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
-    xf86IDrvMsg(info, X_PROBED, "Using %s input event time stamps\n",
-                cmt->is_monotonic ? "monotonic" : "realtime");
+    Event_Get_Time(&device->before_sync_time, device->is_monotonic);
+    Event_Get_Time(&device->after_sync_time, device->is_monotonic);
+    LOG_DEBUG(device, "Using %s input event time stamps\n",
+              device->is_monotonic ? "monotonic" : "realtime");
 }
 
 /**
  * Debug Print Helper Functions
  */
 static void
-Absinfo_Print(InputInfoPtr info, struct input_absinfo* absinfo)
+Absinfo_Print(EvDevicePtr device, struct input_absinfo* absinfo)
 {
-    PROBE_DBG(info, "    min = %d\n", absinfo->minimum);
-    PROBE_DBG(info, "    max = %d\n", absinfo->maximum);
+    LOG_DEBUG(device, "    min = %d\n", absinfo->minimum);
+    LOG_DEBUG(device, "    max = %d\n", absinfo->maximum);
     if (absinfo->fuzz)
-        PROBE_DBG(info, "    fuzz = %d\n", absinfo->fuzz);
+        LOG_DEBUG(device, "    fuzz = %d\n", absinfo->fuzz);
     if (absinfo->resolution)
-        PROBE_DBG(info, "    res = %d\n", absinfo->resolution);
+        LOG_DEBUG(device, "    res = %d\n", absinfo->resolution);
 }
 
 static void
-Event_Get_Time(struct timeval *t, Bool use_monotonic) {
+Event_Get_Time(struct timeval *t, bool use_monotonic) {
     struct timespec now;
     clockid_t clockid = (use_monotonic) ? CLOCK_MONOTONIC : CLOCK_REALTIME;
 
@@ -503,27 +490,26 @@ Event_Get_Time(struct timeval *t, Bool use_monotonic) {
  * extra EVIOCGABS query.
  */
 void
-Event_Sync_State(InputInfoPtr info)
+Event_Sync_State(EvDevicePtr device)
 {
     int i;
     struct input_absinfo* absinfo;
-    CmtDevicePtr cmt = info->private;
 
-    Event_Get_Time(&cmt->before_sync_time, cmt->is_monotonic);
+    Event_Get_Time(&device->before_sync_time, device->is_monotonic);
 
-    Event_Sync_Keys(info);
+    Event_Sync_Keys(device);
 
     /* Get current pressure information for semi_mt device */
-    if (Event_Get_Semi_MT(info)) {
-        absinfo = &cmt->absinfo[ABS_PRESSURE];
-        if (ioctl(info->fd, EVIOCGABS(ABS_PRESSURE), absinfo) < 0) {
-            ERR(info, "ioctl EVIOCGABS(ABS_PRESSURE) failed: %s\n",
+    if (Event_Get_Semi_MT(device)) {
+        absinfo = &device->absinfo[ABS_PRESSURE];
+        if (ioctl(device->fd, EVIOCGABS(ABS_PRESSURE), absinfo) < 0) {
+            LOG_ERROR(device, "ioctl EVIOCGABS(ABS_PRESSURE) failed: %s\n",
                 strerror(errno));
         } else {
             struct input_event ev;
             ev.code = ABS_PRESSURE;
             ev.value = absinfo->value;
-            SemiMtSetAbsPressure(info, &ev);
+            SemiMtSetAbsPressure(device, &ev);
         }
     }
 
@@ -533,7 +519,7 @@ Event_Sync_State(InputInfoPtr info)
     for (i = _ABS_MT_FIRST; i <= _ABS_MT_LAST; i++) {
         MTSlotInfo req;
 
-        if (!TestBit(i, cmt->abs_bitmask))
+        if (!TestBit(i, device->abs_bitmask))
             continue;
         /*
          * TODO(cywang): Scale the size of slots in MTSlotInfo based on the
@@ -541,55 +527,56 @@ Event_Sync_State(InputInfoPtr info)
          */
 
         req.code = i;
-        if (ioctl(info->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
-            ERR(info, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n", i,
-                strerror(errno));
+        if (ioctl(device->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
+            LOG_ERROR(device, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n",
+                      i, strerror(errno));
             continue;
         }
-        MT_Slot_Sync(info, &req);
+        MT_Slot_Sync(device, &req);
     }
 
     /* Get current slot id */
-    absinfo = &cmt->absinfo[ABS_MT_SLOT];
-    if (ioctl(info->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0)
-        ERR(info, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n", strerror(errno));
+    absinfo = &device->absinfo[ABS_MT_SLOT];
+    if (ioctl(device->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0)
+        LOG_ERROR(device, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n",
+                  strerror(errno));
     else
-        MT_Slot_Set(info, absinfo->value);
+        MT_Slot_Set(device, absinfo->value);
 
-    Event_Get_Time(&cmt->after_sync_time, cmt->is_monotonic);
-    xf86IDrvMsg(info, X_PROBED,
-                "Event_Sync_State: before %ld.%ld after %ld.%ld\n",
-                cmt->before_sync_time.tv_sec, cmt->before_sync_time.tv_usec,
-                cmt->after_sync_time.tv_sec, cmt->after_sync_time.tv_usec);
+    Event_Get_Time(&device->after_sync_time, device->is_monotonic);
+
+    LOG_DEBUG(device, "Event_Sync_State: before %ld.%ld after %ld.%ld\n",
+              device->before_sync_time.tv_sec, device->before_sync_time.tv_usec,
+              device->after_sync_time.tv_sec, device->after_sync_time.tv_usec);
 }
 
 static void
-Event_Print(InputInfoPtr info, struct input_event* ev)
+Event_Print(EvDevicePtr device, struct input_event* ev)
 {
     switch (ev->type) {
     case EV_SYN:
         switch (ev->code) {
         case SYN_REPORT:
-            DBG(info, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
+            LOG_ERROR(device, "@ %ld.%06ld  ---------- SYN_REPORT -------\n",
                 ev->time.tv_sec, ev->time.tv_usec);
             return;
         case SYN_MT_REPORT:
-            DBG(info, "@ %ld.%06ld  ........ SYN_MT_REPORT ......\n",
+            LOG_ERROR(device, "@ %ld.%06ld  ........ SYN_MT_REPORT ......\n",
                 ev->time.tv_sec, ev->time.tv_usec);
             return;
         case SYN_DROPPED:
-            ERR(info, "@ %ld.%06ld  ++++++++ SYN_DROPPED ++++++++\n",
+            LOG_ERROR(device, "@ %ld.%06ld  ++++++++ SYN_DROPPED ++++++++\n",
                 ev->time.tv_sec, ev->time.tv_usec);
             return;
         default:
-            ERR(info, "@ %ld.%06ld  ?????? SYN_UNKNOWN (%d) ?????\n",
+            LOG_ERROR(device, "@ %ld.%06ld  ?????? SYN_UNKNOWN (%d) ?????\n",
                 ev->time.tv_sec, ev->time.tv_usec, ev->code);
             return;
         }
         break;
     case EV_ABS:
         if (ev->code == ABS_MT_SLOT) {
-            DBG(info, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
+            LOG_ERROR(device, "@ %ld.%06ld  .......... MT SLOT %d ........\n",
                 ev->time.tv_sec, ev->time.tv_usec, ev->value);
             return;
         }
@@ -598,7 +585,7 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
         break;
     }
 
-    DBG(info, "@ %ld.%06ld %s[%d] (%s) = %d\n",
+    LOG_ERROR(device, "@ %ld.%06ld %s[%d] (%s) = %d\n",
         ev->time.tv_sec, ev->time.tv_usec, Event_Type_To_String(ev->type),
         ev->code, Event_To_String(ev->type, ev->code), ev->value);
 }
@@ -606,13 +593,12 @@ Event_Print(InputInfoPtr info, struct input_event* ev)
 /**
  * Process Input Events
  */
-Bool
-Event_Process(InputInfoPtr info, struct input_event* ev)
+bool
+Event_Process(EvDevicePtr device, struct input_event* ev)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
 
-    Event_Print(info, ev);
+    Event_Print(device, ev);
     if (evstate->debug_buf) {
         evstate->debug_buf[evstate->debug_buf_tail] = *ev;
         evstate->debug_buf_tail =
@@ -622,22 +608,22 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
     switch (ev->type) {
     case EV_SYN:
         if (ev->code == SYN_DROPPED)
-            return TRUE;
-        Event_Syn(info, ev);
+            return true;
+        Event_Syn(device, ev);
         break;
 
     case EV_KEY:
-        Event_Key(info, ev);
+        Event_Key(device, ev);
         break;
 
     case EV_ABS:
-        Event_Abs(info, ev);
+        Event_Abs(device, ev);
         break;
 
     default:
         break;
     }
-    return FALSE;
+    return false;
 }
 
 /**
@@ -646,14 +632,13 @@ Event_Process(InputInfoPtr info, struct input_event* ev)
 void
 Event_Dump_Debug_Log(void* vinfo)
 {
-    InputInfoPtr info = (InputInfoPtr) vinfo;
+    EvDevicePtr device = (EvDevicePtr) vinfo;
     size_t i;
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
 
     FILE* fp = fopen("/var/log/cmt_input_events.dat", "wb");
     if (!fp) {
-        ERR(info, "fopen() failed for debug log");
+        LOG_ERROR(device, "fopen() failed for debug log");
         return;
     }
     for (i = 0; i < DEBUG_BUF_SIZE; i++) {
@@ -669,7 +654,7 @@ Event_Dump_Debug_Log(void* vinfo)
                             ev->code,
                             ev->value);
         if (rc == 0) {
-            ERR(info, "fprintf() failed for debug log. Log is short");
+            LOG_ERROR(device, "fprintf() failed for debug log. Log is short");
             break;
         }
     }
@@ -677,51 +662,47 @@ Event_Dump_Debug_Log(void* vinfo)
 }
 
 static void
-Event_Syn(InputInfoPtr info, struct input_event* ev)
+Event_Syn(EvDevicePtr device, struct input_event* ev)
 {
     switch (ev->code) {
     case SYN_REPORT:
-        Event_Syn_Report(info, ev);
+        Event_Syn_Report(device, ev);
         break;
     case SYN_MT_REPORT:
-        Event_Syn_MT_Report(info, ev);
+        Event_Syn_MT_Report(device, ev);
         break;
     }
 }
 
 static void
-Event_Syn_Report(InputInfoPtr info, struct input_event* ev)
+Event_Syn_Report(EvDevicePtr device, struct input_event* ev)
 {
-    CmtDevicePtr cmt = info->private;
-    GesturePtr gesture = &cmt->gesture;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
+    device->syn_report(device->syn_report_udata, evstate, &ev->time);
 
-    Gesture_Process_Slots(gesture, evstate, &ev->time);
-    MT_Print_Slots(info);
+    MT_Print_Slots(device);
 }
 
 static void
-Event_Syn_MT_Report(InputInfoPtr info, struct input_event* ev)
+Event_Syn_MT_Report(EvDevicePtr device, struct input_event* ev)
 {
     /* TODO(djkurtz): Handle MT-A */
 }
 
 static void
-Event_Key(InputInfoPtr info, struct input_event* ev)
+Event_Key(EvDevicePtr device, struct input_event* ev)
 {
-    CmtDevicePtr cmt = info->private;
-    AssignBit(cmt->key_state_bitmask, ev->code, ev->value);
+    AssignBit(device->key_state_bitmask, ev->code, ev->value);
 }
 
 static void
-SemiMtSetAbsPressure(InputInfoPtr info, struct input_event* ev)
+SemiMtSetAbsPressure(EvDevicePtr device, struct input_event* ev)
 {
     /*
      * Update all active slots with the same ABS_PRESSURE value if it is a
      * semi-mt device.
      */
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
 
     for (int i = 0; i < evstate->slot_count; i++) {
         MtSlotPtr slot = &evstate->slots[i];
@@ -730,26 +711,26 @@ SemiMtSetAbsPressure(InputInfoPtr info, struct input_event* ev)
 }
 
 static void
-Event_Abs(InputInfoPtr info, struct input_event* ev)
+Event_Abs(EvDevicePtr device, struct input_event* ev)
 {
     if (ev->code == ABS_MT_SLOT)
-        MT_Slot_Set(info, ev->value);
+        MT_Slot_Set(device, ev->value);
     else if (IS_ABS_MT(ev->code))
-        Event_Abs_MT(info, ev);
-    else if ((ev->code == ABS_PRESSURE) && Event_Get_Semi_MT(info))
-        SemiMtSetAbsPressure(info, ev);
+        Event_Abs_MT(device, ev);
+    else if ((ev->code == ABS_PRESSURE) && Event_Get_Semi_MT(device))
+        SemiMtSetAbsPressure(device, ev);
 }
 
 static void
-Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
+Event_Abs_MT(EvDevicePtr device, struct input_event* ev)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = device->evstate;
     struct input_absinfo* axis = evstate->mt_axes[MT_CODE(ev->code)];
     MtSlotPtr slot = evstate->slot_current;
 
     if (axis == NULL) {
-        ERR(info, "ABS_MT[%02x] was not reported by this device\n", ev->code);
+        LOG_ERROR(device, "ABS_MT[%02x] was not reported by this device\n",
+                  ev->code);
         return;
     }
 
@@ -757,13 +738,12 @@ Event_Abs_MT(InputInfoPtr info, struct input_event* ev)
     if ((ev->code != ABS_MT_TRACKING_ID)
                     && ((ev->value < axis->minimum)
                         || (ev->value > axis->maximum))) {
-        xf86IDrvMsgVerb(info, X_WARNING, DBG_VERB,
-            "ABS_MT[%02x] = %d : value out of range [%d .. %d]\n",
-            ev->code, ev->value, axis->minimum, axis->maximum);
+      LOG_WARNING(device, "ABS_MT[%02x] = %d : value out of range [%d .. %d]\n",
+                  ev->code, ev->value, axis->minimum, axis->maximum);
     }
 
     if (slot == NULL) {
-        ERR(info, "MT slot not set. Ignoring ABS_MT event\n");
+        LOG_ERROR(device, "MT slot not set. Ignoring ABS_MT event\n");
         return;
     }
 

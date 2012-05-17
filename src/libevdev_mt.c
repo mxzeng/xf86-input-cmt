@@ -6,9 +6,10 @@
 
 #include "libevdev_mt.h"
 
+#include <errno.h>
 #include <linux/input.h>
 
-#include "cmt.h"
+#include "libevdev.h"
 
 const char *mt_axis_names[] = {
     "Touch Major",
@@ -25,7 +26,7 @@ const char *mt_axis_names[] = {
     "Distance",
 };
 
-static void MT_Slot_Print(InputInfoPtr, MtSlotPtr);
+static void MT_Slot_Print(EvDevicePtr, MtSlotPtr);
 
 /**
  * MT Slot Accessors
@@ -108,10 +109,9 @@ MT_Slot_Value_Set(MtSlotPtr slot, int code, int value)
 }
 
 int
-MTB_Init(InputInfoPtr info, int min, int max, int current)
+MTB_Init(EvDevicePtr cmt, int min, int max, int current)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
     int i;
 
     evstate->slot_min = min;
@@ -119,38 +119,36 @@ MTB_Init(InputInfoPtr info, int min, int max, int current)
 
     evstate->slots = calloc(sizeof(MtSlotRec), evstate->slot_count);
     if (evstate->slots == NULL)
-        return BadAlloc;
+        return ENOMEM;
 
     for (i=0; i < evstate->slot_count; i++)
         evstate->slots[i].tracking_id = -1;
 
-    MT_Slot_Set(info, current);
+    MT_Slot_Set(cmt, current);
 
     return Success;
 }
 
 void
-MT_Free(InputInfoPtr info)
+MT_Free(EvDevicePtr cmt)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
 
     free(evstate->slots);
     evstate->slots = NULL;
 }
 
 void
-MT_Slot_Set(InputInfoPtr info, int value)
+MT_Slot_Set(EvDevicePtr cmt, int value)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
     int slot_min = evstate->slot_min;
     int slot_max = evstate->slot_min + evstate->slot_count - 1;
 
     if (value < slot_min || value > slot_max) {
         evstate->slot_current = NULL;
-        xf86IDrvMsg(info, X_WARNING,
-            "MT Slot %d not in range [%d .. %d]\n", value, slot_min, slot_max);
+        LOG_WARNING(cmt, "MT Slot %d not in range [%d .. %d]\n",
+            value, slot_min, slot_max);
         return;
     }
 
@@ -159,10 +157,9 @@ MT_Slot_Set(InputInfoPtr info, int value)
 
 
 static void
-MT_Slot_Print(InputInfoPtr info, MtSlotPtr slot)
+MT_Slot_Print(EvDevicePtr cmt, MtSlotPtr slot)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
     int i;
 
     if (slot == NULL)
@@ -172,16 +169,15 @@ MT_Slot_Print(InputInfoPtr info, MtSlotPtr slot)
         if (evstate->mt_axes[MT_CODE(i)] == NULL)
             continue;
 
-        DBG(info, "  %s = %d\n", mt_axis_names[MT_CODE(i)],
+        LOG_DEBUG(cmt, "  %s = %d\n", mt_axis_names[MT_CODE(i)],
             MT_Slot_Value_Get(slot, i));
     }
 }
 
 void
-MT_Print_Slots(InputInfoPtr info)
+MT_Print_Slots(EvDevicePtr cmt)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
     int slot_min = evstate->slot_min;
     int slot_max = evstate->slot_min + evstate->slot_count;
     int i;
@@ -190,16 +186,15 @@ MT_Print_Slots(InputInfoPtr info)
         MtSlotPtr slot = &evstate->slots[i];
         if (slot->tracking_id == -1)
             continue;
-        DBG(info, "Slot %d:\n", slot_min + i);
-        MT_Slot_Print(info, slot);
+        LOG_DEBUG(cmt, "Slot %d:\n", slot_min + i);
+        MT_Slot_Print(cmt, slot);
     }
 }
 
 void
-MT_Slot_Sync(InputInfoPtr info, MTSlotInfoPtr slot_info)
+MT_Slot_Sync(EvDevicePtr cmt, MTSlotInfoPtr slot_info)
 {
-    CmtDevicePtr cmt = info->private;
-    EventStatePtr evstate = &cmt->evstate;
+    EventStatePtr evstate = cmt->evstate;
     int i;
 
     for (i = 0; i < evstate->slot_count; i++) {
