@@ -27,9 +27,6 @@
 #error Unsupported XInput version. Major version 12 and above required.
 #endif
 
-/* Number of events to attempt to read from kernel on each SIGIO */
-#define NUM_EVENTS          16
-
 #ifndef AXIS_LABEL_PROP_ABS_START_TIME
 #define AXIS_LABEL_PROP_ABS_START_TIME     "Abs Start Timestamp"
 #endif
@@ -145,11 +142,8 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 
     xf86ProcessCommonOptions(info, info->options);
 
-    if (info->fd >= 0) {
-        close(info->fd);
-        info->fd = -1;
-        cmt->evdev.fd = info->fd;
-    }
+    if (info->fd >= 0)
+        info->fd = EvdevClose(&cmt->evdev);
 
     rc = Gesture_Init(&cmt->gesture, Event_Get_Slot_Count(&cmt->evdev));
     if (rc != Success)
@@ -160,11 +154,8 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 Error_Gesture_Init:
     Event_Free(&cmt->evdev);
 Error_Event_Init:
-    if (info->fd >= 0) {
-        close(info->fd);
-        info->fd = -1;
-        cmt->evdev.fd = info->fd;
-    }
+    if (info->fd >= 0)
+      info->fd = EvdevClose(&cmt->evdev);
 Error_OpenDevice:
     free(cmt);
     info->private = NULL;
@@ -219,53 +210,15 @@ DeviceControl(DeviceIntPtr dev, int mode)
 static void
 ReadInput(InputInfoPtr info)
 {
-    struct input_event ev[NUM_EVENTS];
-    int i;
-    int len;
-    Bool sync_evdev_state = FALSE;
     CmtDevicePtr cmt = info->private;
 
-    do {
-        len = read(info->fd, &ev, sizeof(ev));
-        if (len <= 0) {
-            if (errno == ENODEV) { /* May happen after resume */
-                xf86RemoveEnabledDevice(info);
-                close(info->fd);
-                info->fd = -1;
-                cmt->evdev.fd = info->fd;
-            } else if (errno != EAGAIN) {
-                ERR(info, "Read error: %s\n", strerror(errno));
-            }
-            break;
-        }
-
-        /* kernel always delivers complete events, so len must be sizeof *ev */
-        if (len % sizeof(*ev)) {
-            ERR(info, "Read error: %s\n", strerror(errno));
-            break;
-        }
-
-        /* Process events ... */
-        for (i = 0; i < len/sizeof(ev[0]); i++) {
-            if (sync_evdev_state)
-                break;
-            if (timercmp(&ev[i].time, &cmt->evdev.before_sync_time, <)) {
-                /* Ignore events before last sync time */
-                continue;
-            } else if (timercmp(&ev[i].time, &cmt->evdev.after_sync_time, >)) {
-                /* Event_Process returns TRUE if SYN_DROPPED detected */
-                sync_evdev_state = Event_Process(&cmt->evdev, &ev[i]);
-            } else {
-                /* If the event occurred during sync, then sync again */
-                sync_evdev_state = TRUE;
-            }
-        }
-
-    } while (len == sizeof(ev));
-    /* Keep reading if kernel supplied NUM_EVENTS events. */
-
-    if (sync_evdev_state)
-        Event_Sync_State(&cmt->evdev);
+    int err = EvdevRead(&cmt->evdev);
+    if (err == ENODEV) {
+        xf86RemoveEnabledDevice(info);
+        info->fd = EvdevClose(&cmt->evdev);
+    } else if (err != EAGAIN) {
+        ERR(info, "Read error: %s\n", strerror(errno));
+    }
 }
 
 /**
@@ -325,9 +278,7 @@ DeviceOff(DeviceIntPtr dev)
     Gesture_Device_Off(&cmt->gesture);
     if (info->fd != -1) {
         xf86RemoveEnabledDevice(info);
-        close(info->fd);
-        info->fd = -1;
-        cmt->evdev.fd = info->fd;
+        info->fd = EvdevClose(&cmt->evdev);
     }
     return Success;
 }
@@ -345,7 +296,6 @@ DeviceClose(DeviceIntPtr dev)
     PropertiesClose(dev);
     return Success;
 }
-
 
 /**
  * Open Device Node
@@ -366,9 +316,8 @@ OpenDevice(InputInfoPtr info)
 
     if (info->fd < 0) {
         do {
-            info->fd = open(cmt->device, O_RDWR | O_NONBLOCK, 0);
+            info->fd = EvdevOpen(&cmt->evdev, cmt->device);
         } while (info->fd < 0 && errno == EINTR);
-        cmt->evdev.fd = info->fd;
 
         if (info->fd < 0) {
             ERR(info, "Cannot open \"%s\".\n", cmt->device);

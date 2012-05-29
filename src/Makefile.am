@@ -41,4 +41,5 @@ AM_CPPFLAGS =-I$(top_srcdir)/include
                                libevdev_event.c \
                                gesture.c \
                                libevdev_mt.c \
-                               properties.c
+                               properties.c \
+                               libevdev.c
