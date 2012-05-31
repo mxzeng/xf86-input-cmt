@@ -58,4 +58,9 @@ int EvdevOpen(EvDevicePtr, const char*);
 int EvdevClose(EvDevicePtr);
 int EvdevRead(EvDevicePtr);
 int EvdevProbe(EvDevicePtr);
+int EvdevProbeAbsinfo(EvDevicePtr device, size_t key);
+int EvdevProbeMTSlot(EvDevicePtr device, MTSlotInfoPtr req);
+int EvdevProbeKeyState(EvDevicePtr device);
+int EvdevEnableMonotonic(EvDevicePtr device);
+
 #endif

@@ -19,7 +19,16 @@
 /* Number of events to attempt to read from kernel on each SIGIO */
 #define NUM_EVENTS          16
 
-static void Absinfo_Print(EvDevicePtr device, struct input_absinfo* absinfo);
+#ifndef EVIOCGMTSLOTS
+#define EVIOCGMTSLOTS(len)  _IOC(_IOC_READ, 'E', 0x0a, len)
+#endif
+
+/* Set clockid to be used for timestamps */
+#ifndef EVIOCSCLOCKID
+#define EVIOCSCLOCKID  _IOW('E', 0xa0, int)
+#endif
+
+static void Absinfo_Print(EvDevicePtr device, struct input_absinfo*);
 static const char* Event_Property_To_String(int type);
 
 int EvdevOpen(EvDevicePtr evdev, const char* device) {
@@ -188,9 +197,47 @@ int EvdevProbe(EvDevicePtr device) {
   return Success;
 }
 
-/**
- * Helper functions
- */
+int EvdevProbeAbsinfo(EvDevicePtr device, size_t key) {
+  struct input_absinfo* absinfo;
+
+  absinfo = &device->info.absinfo[key];
+  if (ioctl(device->fd, EVIOCGABS(key), absinfo) < 0) {
+      LOG_ERROR(device, "ioctl EVIOCGABS(%d) failed: %s\n", key,
+                strerror(errno));
+      return !Success;
+  } else {
+      return Success;
+  }
+}
+
+int EvdevProbeMTSlot(EvDevicePtr device, MTSlotInfoPtr req) {
+  if (ioctl(device->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
+      LOG_ERROR(device, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n",
+          req->code, strerror(errno));
+      return !Success;
+  } else {
+      return Success;
+  }
+}
+
+int EvdevProbeKeyState(EvDevicePtr device) {
+  int len = sizeof(device->key_state_bitmask);
+
+  memset(device->key_state_bitmask, 0, len);
+  if (ioctl(device->fd, EVIOCGKEY(len), device->key_state_bitmask) < 0) {
+      LOG_ERROR(device, "ioctl EVIOCGKEY failed: %s\n", strerror(errno));
+      return !Success;
+  } else {
+      return Success;
+  }
+}
+
+int EvdevEnableMonotonic(EvDevicePtr device) {
+  unsigned int clk = CLOCK_MONOTONIC;
+  return (ioctl(device->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
+}
+
+
 static const char*
 Event_Property_To_String(int type) {
     switch (type) {

@@ -43,7 +43,6 @@ static void Event_Key(EvDevicePtr, struct input_event*);
 static void Event_Abs(EvDevicePtr, struct input_event*);
 static void Event_Abs_MT(EvDevicePtr, struct input_event*);
 static void SemiMtSetAbsPressure(EvDevicePtr, struct input_event*);
-static void Event_Sync_Keys(EvDevicePtr);
 static void Event_Get_Time(struct timeval*, bool);
 
 /**
@@ -127,16 +126,6 @@ Event_Get_Touch_Count_Max(EvDevicePtr device)
     return 1;
 }
 
-static void
-Event_Sync_Keys(EvDevicePtr device)
-{
-    int len = sizeof(device->key_state_bitmask);
-
-    memset(device->key_state_bitmask, 0, len);
-    if (ioctl(device->fd, EVIOCGKEY(len), device->key_state_bitmask) < 0)
-        LOG_ERROR(device, "ioctl EVIOCGKEY failed: %s\n", strerror(errno));
-}
-
 int
 Event_Get_Touch_Count(EvDevicePtr device)
 {
@@ -177,13 +166,6 @@ int
 Event_Get_Button_Right(EvDevicePtr device)
 {
     return TestBit(BTN_RIGHT, device->key_state_bitmask);
-}
-
-static int
-Event_Enable_Monotonic(EvDevicePtr device)
-{
-    unsigned int clk = CLOCK_MONOTONIC;
-    return (ioctl(device->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
 }
 
 #define CASE_RETURN(s) \
@@ -317,7 +299,7 @@ void
 Event_Open(EvDevicePtr device)
 {
     /* Select monotonic input event timestamps, if supported by kernel */
-    device->info.is_monotonic = (Event_Enable_Monotonic(device) == Success);
+    device->info.is_monotonic = (EvdevEnableMonotonic(device) == Success);
     /* Reset the sync time variables */
     Event_Get_Time(&device->before_sync_time, device->info.is_monotonic);
     Event_Get_Time(&device->after_sync_time, device->info.is_monotonic);
@@ -347,22 +329,17 @@ void
 Event_Sync_State(EvDevicePtr device)
 {
     int i;
-    struct input_absinfo* absinfo;
 
     Event_Get_Time(&device->before_sync_time, device->info.is_monotonic);
 
-    Event_Sync_Keys(device);
+    EvdevProbeKeyState(device);
 
     /* Get current pressure information for semi_mt device */
     if (Event_Get_Semi_MT(device)) {
-        absinfo = &device->info.absinfo[ABS_PRESSURE];
-        if (ioctl(device->fd, EVIOCGABS(ABS_PRESSURE), absinfo) < 0) {
-            LOG_ERROR(device, "ioctl EVIOCGABS(ABS_PRESSURE) failed: %s\n",
-                strerror(errno));
-        } else {
+        if (EvdevProbeAbsinfo(device, ABS_PRESSURE) == Success) {
             struct input_event ev;
             ev.code = ABS_PRESSURE;
-            ev.value = absinfo->value;
+            ev.value = device->info.absinfo[ABS_PRESSURE].value;
             SemiMtSetAbsPressure(device, &ev);
         }
     }
@@ -381,23 +358,15 @@ Event_Sync_State(EvDevicePtr device)
          */
 
         req.code = i;
-        if (ioctl(device->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
-            LOG_ERROR(device, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n",
-                      i, strerror(errno));
+        if (EvdevProbeMTSlot(device, &req) != Success) {
             continue;
         }
         MT_Slot_Sync(device, &req);
     }
 
     /* Get current slot id */
-    absinfo = &device->info.absinfo[ABS_MT_SLOT];
-    if (ioctl(device->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n",
-                  strerror(errno));
-    }
-    else {
-        MT_Slot_Set(device, absinfo->value);
-    }
+    if (EvdevProbeAbsinfo(device, ABS_MT_SLOT) == Success)
+        MT_Slot_Set(device, device->info.absinfo[ABS_MT_SLOT].value);
 
     Event_Get_Time(&device->after_sync_time, device->info.is_monotonic);
 
