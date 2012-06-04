@@ -5,15 +5,15 @@
  */
 
 
-#ifndef _EVENT_H_
-#define _EVENT_H_
+#ifndef _LIBEVDEV_EVENT_H_
+#define _LIBEVDEV_EVENT_H_
 
 #include <linux/input.h>
 
 #include <xorg-server.h>
 #include <xf86Xinput.h>
 
-#include "mt.h"
+#include "libevdev_mt.h"
 
 
 /* 1 MiB debug buffer of struct input_event objects */

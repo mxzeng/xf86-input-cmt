@@ -14,8 +14,8 @@
 #include <xorg-server.h>
 #include <xf86.h>
 
-#include "event.h"
 #include "gesture.h"
+#include "libevdev_event.h"
 #include "properties.h"
 
 /* Message Log Verbosity for debug messages */

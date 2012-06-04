@@ -21,7 +21,7 @@
 #include <xf86_OSproc.h>
 #include <xserver-properties.h>
 
-#include "event.h"
+#include "libevdev_event.h"
 #include "properties.h"
 
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 12

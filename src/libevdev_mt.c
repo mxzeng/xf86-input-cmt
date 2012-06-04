@@ -4,7 +4,7 @@
  * found in the LICENSE file.
  */
 
-#include "mt.h"
+#include "libevdev_mt.h"
 
 #include <linux/input.h>
 

@@ -5,8 +5,8 @@
  */
 
 
-#ifndef _MT_H_
-#define _MT_H_
+#ifndef _LIBEVDEV_MT_H_
+#define _LIBEVDEV_MT_H_
 
 #include <linux/input.h>
 

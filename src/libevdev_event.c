@@ -4,14 +4,14 @@
  * found in the LICENSE file.
  */
 
-#include "event.h"
+#include "libevdev_event.h"
 
 #include <errno.h>
 #include <linux/input.h>
 #include <time.h>
 
 #include "cmt.h"
-#include "mt.h"
+#include "libevdev_mt.h"
 
 #ifndef BTN_TOOL_QUINTTAP
 #define BTN_TOOL_QUINTTAP  0x148  /* Five fingers on trackpad */
