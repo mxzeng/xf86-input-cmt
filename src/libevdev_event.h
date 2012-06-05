@@ -51,5 +51,7 @@ int Event_Get_Button_Left(EvDevicePtr);
 int Event_Get_Button_Middle(EvDevicePtr);
 int Event_Get_Button_Right(EvDevicePtr);
 void Event_Sync_State(EvDevicePtr);
+const char* Event_To_String(int type, int code);
+const char* Event_Type_To_String(int type);
 
 #endif

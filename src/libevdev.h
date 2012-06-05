@@ -57,4 +57,5 @@ typedef struct EvDevice_ EvDevice, *EvDevicePtr;
 int EvdevOpen(EvDevicePtr, const char*);
 int EvdevClose(EvDevicePtr);
 int EvdevRead(EvDevicePtr);
+int EvdevProbe(EvDevicePtr);
 #endif

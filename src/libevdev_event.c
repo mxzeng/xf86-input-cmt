@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "libevdev.h"
+#include "libevdev_util.h"
 
 #ifndef BTN_TOOL_QUINTTAP
 #define BTN_TOOL_QUINTTAP  0x148  /* Five fingers on trackpad */
@@ -31,11 +32,7 @@
 #define SYN_DROPPED  3
 #endif
 
-static inline void AssignBit(unsigned long*, int, int);
-static inline bool TestBit(int, unsigned long*);
 
-static void Absinfo_Print(EvDevicePtr device, struct input_absinfo*);
-static void Event_Print(EvDevicePtr, struct input_event*);
 
 static void Event_Syn(EvDevicePtr, struct input_event*);
 static void Event_Syn_Report(EvDevicePtr, struct input_event*);
@@ -48,25 +45,6 @@ static void Event_Abs_MT(EvDevicePtr, struct input_event*);
 static void SemiMtSetAbsPressure(EvDevicePtr, struct input_event*);
 static void Event_Sync_Keys(EvDevicePtr);
 static void Event_Get_Time(struct timeval*, bool);
-
-/**
- * Helper functions
- */
-static inline bool
-TestBit(int bit, unsigned long* array)
-{
-    return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
-}
-
-static inline void
-AssignBit(unsigned long* array, int bit, int value)
-{
-    unsigned long mask = (1L << (bit % LONG_BITS));
-    if (value)
-        array[bit / LONG_BITS] |= mask;
-    else
-        array[bit / LONG_BITS] &= ~mask;
-}
 
 /**
  * Input Device Event Property accessors
@@ -213,7 +191,7 @@ Event_Enable_Monotonic(EvDevicePtr device)
         return #s
 
 
-static const char *
+const char *
 Event_To_String(int type, int code) {
     switch (type) {
     case EV_SYN:
@@ -269,7 +247,7 @@ Event_To_String(int type, int code) {
 }
 #undef CASE_RETURN
 
-static const char *
+const char *
 Event_Type_To_String(int type) {
     switch (type) {
     case EV_SYN: return "SYN";
@@ -287,16 +265,6 @@ Event_Type_To_String(int type) {
     }
 }
 
-static const char *
-Event_Property_To_String(int type) {
-    switch (type) {
-    case INPUT_PROP_POINTER: return "POINTER";      /* needs a pointer */
-    case INPUT_PROP_DIRECT: return "DIRECT";        /* direct input devices */
-    case INPUT_PROP_BUTTONPAD: return "BUTTONPAD";  /* has button under pad */
-    case INPUT_PROP_SEMI_MT: return "SEMI_MT";      /* touch rectangle only */
-    default: return "?";
-    }
-}
 
 /**
  * Probe Device Input Event Support
@@ -304,86 +272,12 @@ Event_Property_To_String(int type) {
 int
 Event_Init(EvDevicePtr device)
 {
-    EventStatePtr evstate = device->evstate;
     int i;
-    int len;
-    EvDeviceInfoPtr info = &device->info;
+    EventStatePtr evstate;
 
-    if (ioctl(device->fd, EVIOCGID, &info->id) < 0) {
-         LOG_ERROR(device, "ioctl EVIOCGID failed: %s\n", strerror(errno));
-         return !Success;
-    }
-    LOG_DEBUG(device, "vendor: %02X, product: %02X\n", info->id.vendor,
-              info->id.product);
-
-    if (ioctl(device->fd, EVIOCGNAME(sizeof(info->name) - 1),
-              info->name) < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGNAME failed: %s\n", strerror(errno));
-        return !Success;
-    }
-    LOG_DEBUG(device, "name: %s\n", info->name);
-
-    len = ioctl(device->fd, EVIOCGPROP(sizeof(info->prop_bitmask)),
-                info->prop_bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGPROP failed: %s\n", strerror(errno));
-        return !Success;
-    }
-    for (i = 0; i < len*8; i++) {
-        if (TestBit(i, info->prop_bitmask))
-            LOG_DEBUG(device, "Has Property: %d (%s)\n", i,
-                      Event_Property_To_String(i));
-    }
-
-    len = ioctl(device->fd, EVIOCGBIT(0, sizeof(info->bitmask)),
-                info->bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGBIT failed: %s\n", strerror(errno));
-        return !Success;
-    }
-    for (i = 0; i < len*8; i++) {
-        if (TestBit(i, info->bitmask))
-            LOG_DEBUG(device, "Has Event Type %d = %s\n", i,
-                      Event_Type_To_String(i));
-    }
-
-    len = ioctl(device->fd, EVIOCGBIT(EV_KEY, sizeof(info->key_bitmask)),
-                info->key_bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_KEY) failed: %s\n",
-                  strerror(errno));
-        return !Success;
-    }
-    for (i = 0; i < len*8; i++) {
-        if (TestBit(i, info->key_bitmask))
-            LOG_DEBUG(device, "Has KEY[%d] = %s\n", i,
-                      Event_To_String(EV_KEY, i));
-    }
-
-    len = ioctl(device->fd, EVIOCGBIT(EV_LED, sizeof(info->led_bitmask)),
-                info->led_bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_LED) failed: %s\n",
-                  strerror(errno));
-        return !Success;
-    }
-    for (i = 0; i < len*8; i++) {
-        if (TestBit(i, info->led_bitmask))
-            LOG_DEBUG(device, "Has LED[%d] = %s\n", i,
-                      Event_To_String(EV_LED, i));
-    }
-
-    len = ioctl(device->fd, EVIOCGBIT(EV_REL, sizeof(info->rel_bitmask)),
-                info->rel_bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_REL) failed: %s\n",
-                  strerror(errno));
-        return !Success;
-    }
-    for (i = 0; i < len*8; i++) {
-        if (TestBit(i, info->rel_bitmask))
-            LOG_DEBUG(device, "Has REL[%d] = %s\n", i,
-                      Event_To_String(EV_REL, i));
+    evstate = device->evstate;
+    if (EvdevProbe(device) != Success) {
+      return !Success;
     }
 
     /*
@@ -393,32 +287,9 @@ Event_Init(EvDevicePtr device)
      *    probe and when we start listening for input events.
      */
 
-    len = ioctl(device->fd, EVIOCGBIT(EV_ABS, sizeof(info->abs_bitmask)),
-                info->abs_bitmask);
-    if (len < 0) {
-        LOG_ERROR(device, "ioctl EVIOCGBIT(EV_ABS) failed: %s\n",
-                  strerror(errno));
-        return !Success;
-    }
-
     for (i = ABS_X; i <= ABS_MAX; i++) {
-        if (TestBit(i, info->abs_bitmask)) {
-            struct input_absinfo* absinfo = &info->absinfo[i];
-            LOG_DEBUG(device, "Has ABS[%d] = %s\n", i,
-                      Event_To_String(EV_ABS, i));
-            len = ioctl(device->fd, EVIOCGABS(i), absinfo);
-            if (len < 0) {
-                LOG_ERROR(device, "ioctl EVIOCGABS(%d) failed: %s\n", i,
-                    strerror(errno));
-                /*
-                 * Clean up in case where error happens after MTB_Init() has
-                 * already allocated slots.
-                 */
-                goto error_MT_Free;
-            }
-
-            Absinfo_Print(device, absinfo);
-
+        if (TestBit(i, device->info.abs_bitmask)) {
+            struct input_absinfo* absinfo = &device->info.absinfo[i];
             if (i == ABS_MT_SLOT) {
                 int rc;
                 rc = MTB_Init(device, absinfo->minimum, absinfo->maximum,
@@ -434,10 +305,6 @@ Event_Init(EvDevicePtr device)
     /* Synchronize all MT slots with kernel evdev driver */
     Event_Sync_State(device);
     return Success;
-
-error_MT_Free:
-    MT_Free(device);
-    return !Success;
 }
 
 void
@@ -456,20 +323,6 @@ Event_Open(EvDevicePtr device)
     Event_Get_Time(&device->after_sync_time, device->info.is_monotonic);
     LOG_DEBUG(device, "Using %s input event time stamps\n",
               device->info.is_monotonic ? "monotonic" : "realtime");
-}
-
-/**
- * Debug Print Helper Functions
- */
-static void
-Absinfo_Print(EvDevicePtr device, struct input_absinfo* absinfo)
-{
-    LOG_DEBUG(device, "    min = %d\n", absinfo->minimum);
-    LOG_DEBUG(device, "    max = %d\n", absinfo->maximum);
-    if (absinfo->fuzz)
-        LOG_DEBUG(device, "    fuzz = %d\n", absinfo->fuzz);
-    if (absinfo->resolution)
-        LOG_DEBUG(device, "    res = %d\n", absinfo->resolution);
 }
 
 static void
@@ -538,11 +391,13 @@ Event_Sync_State(EvDevicePtr device)
 
     /* Get current slot id */
     absinfo = &device->info.absinfo[ABS_MT_SLOT];
-    if (ioctl(device->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0)
+    if (ioctl(device->fd, EVIOCGABS(ABS_MT_SLOT), absinfo) < 0) {
         LOG_ERROR(device, "ioctl EVIOCGABS(ABS_MT_SLOT) failed: %s\n",
                   strerror(errno));
-    else
+    }
+    else {
         MT_Slot_Set(device, absinfo->value);
+    }
 
     Event_Get_Time(&device->after_sync_time, device->info.is_monotonic);
 
