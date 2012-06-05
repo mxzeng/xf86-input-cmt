@@ -21,6 +21,21 @@
 typedef void (*syn_report_callback)(void*, EventStatePtr, struct timeval*);
 typedef void (*log_callback)(void*, int level, const char*, ...);
 
+struct EvDeviceInfo_ {
+  struct input_id id;
+  char name[1024];
+
+  unsigned long bitmask[NLONGS(EV_CNT)];
+  unsigned long key_bitmask[NLONGS(KEY_CNT)];
+  unsigned long rel_bitmask[NLONGS(REL_CNT)];
+  unsigned long abs_bitmask[NLONGS(ABS_CNT)];
+  unsigned long led_bitmask[NLONGS(LED_CNT)];
+  struct input_absinfo absinfo[ABS_CNT];
+  unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
+  int is_monotonic:1;
+};
+typedef struct EvDeviceInfo_ EvDeviceInfo, *EvDeviceInfoPtr;
+
 struct EvDevice_ {
   syn_report_callback syn_report;
   void* syn_report_udata;
@@ -31,18 +46,9 @@ struct EvDevice_ {
   EventStatePtr evstate;
   int fd;
 
-  /* kernel driver information */
-  struct input_id id;
-  char name[1024];
-  unsigned long bitmask[NLONGS(EV_CNT)];
-  unsigned long key_bitmask[NLONGS(KEY_CNT)];
   unsigned long key_state_bitmask[NLONGS(KEY_CNT)];
-  unsigned long rel_bitmask[NLONGS(REL_CNT)];
-  unsigned long abs_bitmask[NLONGS(ABS_CNT)];
-  unsigned long led_bitmask[NLONGS(LED_CNT)];
-  struct input_absinfo absinfo[ABS_CNT];
-  unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
-  int is_monotonic:1;
+  EvDeviceInfo info;
+
   struct timeval before_sync_time;
   struct timeval after_sync_time;
 };

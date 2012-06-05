@@ -111,8 +111,8 @@ PropertiesInit(DeviceIntPtr dev)
 
     /* Read Only properties */
     PropCreate_String(dev, XI_PROP_DEVICE_NODE, NULL, cmt->device);
-    PropCreate_Short(dev, XI_PROP_VENDOR_ID, NULL, cmt->evdev.id.vendor);
-    PropCreate_Short(dev, XI_PROP_PRODUCT_ID, NULL, cmt->evdev.id.product);
+    PropCreate_Short(dev, XI_PROP_VENDOR_ID, NULL, cmt->evdev.info.id.vendor);
+    PropCreate_Short(dev, XI_PROP_PRODUCT_ID, NULL, cmt->evdev.info.id.product);
 
     /*
      * Useable trackpad area. If not configured in .conf file,

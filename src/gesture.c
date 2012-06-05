@@ -324,7 +324,7 @@ Gesture_TimerCreate(void* provider_data)
         free(timer);
         return NULL;
     }
-    timer->is_monotonic = cmt->evdev.is_monotonic;
+    timer->is_monotonic = cmt->evdev.info.is_monotonic;
     return timer;
 }
 
