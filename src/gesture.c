@@ -362,7 +362,6 @@ Gesture_TimerCallback(OsTimerPtr timer,
                       CARD32 millis,
                       pointer callback_data)
 {
-    int sigstate = xf86BlockSIGIO();
     GesturesTimer* tm = callback_data;
     stime_t now;
     stime_t rc;
@@ -385,7 +384,6 @@ Gesture_TimerCallback(OsTimerPtr timer,
         TimerSet(timer, 0, ms, Gesture_TimerCallback, tm);
     }
 
-    xf86UnblockSIGIO(sigstate);
     return 0;
 }
 
