@@ -81,7 +81,7 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     CmtPropertiesPtr props = &cmt->props;
     EventStatePtr evstate = &cmt->evstate;
     struct HardwareProperties hwprops;
-    EvDevicePtr evdev = &cmt->evdev;
+    EvdevPtr evdev = &cmt->evdev;
 
     /* Store the device for which to generate gestures */
     rec->dev = dev;
@@ -139,7 +139,7 @@ Gesture_Process_Slots(void* vrec,
     DeviceIntPtr dev = rec->dev;
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
-    EvDevicePtr evdev = &cmt->evdev;
+    EvdevPtr evdev = &cmt->evdev;
     int i;
     MtSlotPtr slot;
     struct HardwareState hwstate = { 0 };

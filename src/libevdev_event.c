@@ -34,76 +34,77 @@
 
 
 
-static void Event_Syn(EvDevicePtr, struct input_event*);
-static void Event_Syn_Report(EvDevicePtr, struct input_event*);
-static void Event_Syn_MT_Report(EvDevicePtr, struct input_event*);
+static void Event_Syn(EvdevPtr, struct input_event*);
+static void Event_Syn_Report(EvdevPtr, struct input_event*);
+static void Event_Syn_MT_Report(EvdevPtr, struct input_event*);
 
-static void Event_Key(EvDevicePtr, struct input_event*);
+static void Event_Key(EvdevPtr, struct input_event*);
 
-static void Event_Abs(EvDevicePtr, struct input_event*);
-static void Event_Abs_MT(EvDevicePtr, struct input_event*);
-static void SemiMtSetAbsPressure(EvDevicePtr, struct input_event*);
+static void Event_Abs(EvdevPtr, struct input_event*);
+static void Event_Abs_MT(EvdevPtr, struct input_event*);
+static void SemiMtSetAbsPressure(EvdevPtr, struct input_event*);
+
 static void Event_Get_Time(struct timeval*, bool);
 
 /**
  * Input Device Event Property accessors
  */
 int
-Event_Get_Left(EvDevicePtr device)
+Event_Get_Left(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_X];
     return absinfo->minimum;
 }
 
 int
-Event_Get_Right(EvDevicePtr device)
+Event_Get_Right(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_X];
     return absinfo->maximum;
 }
 
 int
-Event_Get_Top(EvDevicePtr device)
+Event_Get_Top(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_Y];
     return absinfo->minimum;
 }
 
 int
-Event_Get_Bottom(EvDevicePtr device)
+Event_Get_Bottom(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_Y];
     return absinfo->maximum;
 }
 
 int
-Event_Get_Res_Y(EvDevicePtr device)
+Event_Get_Res_Y(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_Y];
     return absinfo->resolution;
 }
 
 int
-Event_Get_Res_X(EvDevicePtr device)
+Event_Get_Res_X(EvdevPtr device)
 {
     struct input_absinfo* absinfo = &device->info.absinfo[ABS_X];
     return absinfo->resolution;
 }
 
 int
-Event_Get_Button_Pad(EvDevicePtr device)
+Event_Get_Button_Pad(EvdevPtr device)
 {
     return TestBit(INPUT_PROP_BUTTONPAD, device->info.prop_bitmask);
 }
 
 int
-Event_Get_Semi_MT(EvDevicePtr device)
+Event_Get_Semi_MT(EvdevPtr device)
 {
     return TestBit(INPUT_PROP_SEMI_MT, device->info.prop_bitmask);
 }
 
 int
-Event_Get_T5R2(EvDevicePtr device)
+Event_Get_T5R2(EvdevPtr device)
 {
     EventStatePtr evstate = device->evstate;
     if (Event_Get_Semi_MT(device))
@@ -112,7 +113,7 @@ Event_Get_T5R2(EvDevicePtr device)
 }
 
 int
-Event_Get_Touch_Count_Max(EvDevicePtr device)
+Event_Get_Touch_Count_Max(EvdevPtr device)
 {
 
     if (TestBit(BTN_TOOL_QUINTTAP, device->info.key_bitmask))
@@ -127,7 +128,7 @@ Event_Get_Touch_Count_Max(EvDevicePtr device)
 }
 
 int
-Event_Get_Touch_Count(EvDevicePtr device)
+Event_Get_Touch_Count(EvdevPtr device)
 {
 
     if (TestBit(BTN_TOOL_QUINTTAP, device->key_state_bitmask))
@@ -144,26 +145,26 @@ Event_Get_Touch_Count(EvDevicePtr device)
 }
 
 int
-Event_Get_Slot_Count(EvDevicePtr device)
+Event_Get_Slot_Count(EvdevPtr device)
 {
     EventStatePtr evstate = device->evstate;
     return evstate->slot_count;
 }
 
 int
-Event_Get_Button_Left(EvDevicePtr device)
+Event_Get_Button_Left(EvdevPtr device)
 {
     return TestBit(BTN_LEFT, device->key_state_bitmask);
 }
 
 int
-Event_Get_Button_Middle(EvDevicePtr device)
+Event_Get_Button_Middle(EvdevPtr device)
 {
     return TestBit(BTN_MIDDLE, device->key_state_bitmask);
 }
 
 int
-Event_Get_Button_Right(EvDevicePtr device)
+Event_Get_Button_Right(EvdevPtr device)
 {
     return TestBit(BTN_RIGHT, device->key_state_bitmask);
 }
@@ -252,7 +253,7 @@ Event_Type_To_String(int type) {
  * Probe Device Input Event Support
  */
 int
-Event_Init(EvDevicePtr device)
+Event_Init(EvdevPtr device)
 {
     int i;
     EventStatePtr evstate;
@@ -290,13 +291,13 @@ Event_Init(EvDevicePtr device)
 }
 
 void
-Event_Free(EvDevicePtr device)
+Event_Free(EvdevPtr device)
 {
     MT_Free(device);
 }
 
 void
-Event_Open(EvDevicePtr device)
+Event_Open(EvdevPtr device)
 {
     /* Select monotonic input event timestamps, if supported by kernel */
     device->info.is_monotonic = (EvdevEnableMonotonic(device) == Success);
@@ -326,7 +327,7 @@ Event_Get_Time(struct timeval *t, bool use_monotonic) {
  * extra EVIOCGABS query.
  */
 void
-Event_Sync_State(EvDevicePtr device)
+Event_Sync_State(EvdevPtr device)
 {
     int i;
 
@@ -376,7 +377,7 @@ Event_Sync_State(EvDevicePtr device)
 }
 
 static void
-Event_Print(EvDevicePtr device, struct input_event* ev)
+Event_Print(EvdevPtr device, struct input_event* ev)
 {
     switch (ev->type) {
     case EV_SYN:
@@ -419,7 +420,7 @@ Event_Print(EvDevicePtr device, struct input_event* ev)
  * Process Input Events
  */
 bool
-Event_Process(EvDevicePtr device, struct input_event* ev)
+Event_Process(EvdevPtr device, struct input_event* ev)
 {
     EventStatePtr evstate = device->evstate;
 
@@ -457,7 +458,7 @@ Event_Process(EvDevicePtr device, struct input_event* ev)
 void
 Event_Dump_Debug_Log(void* vinfo)
 {
-    EvDevicePtr device = (EvDevicePtr) vinfo;
+    EvdevPtr device = (EvdevPtr) vinfo;
     size_t i;
     EventStatePtr evstate = device->evstate;
 
@@ -487,7 +488,7 @@ Event_Dump_Debug_Log(void* vinfo)
 }
 
 static void
-Event_Syn(EvDevicePtr device, struct input_event* ev)
+Event_Syn(EvdevPtr device, struct input_event* ev)
 {
     switch (ev->code) {
     case SYN_REPORT:
@@ -500,7 +501,7 @@ Event_Syn(EvDevicePtr device, struct input_event* ev)
 }
 
 static void
-Event_Syn_Report(EvDevicePtr device, struct input_event* ev)
+Event_Syn_Report(EvdevPtr device, struct input_event* ev)
 {
     EventStatePtr evstate = device->evstate;
     device->syn_report(device->syn_report_udata, evstate, &ev->time);
@@ -509,19 +510,19 @@ Event_Syn_Report(EvDevicePtr device, struct input_event* ev)
 }
 
 static void
-Event_Syn_MT_Report(EvDevicePtr device, struct input_event* ev)
+Event_Syn_MT_Report(EvdevPtr device, struct input_event* ev)
 {
     /* TODO(djkurtz): Handle MT-A */
 }
 
 static void
-Event_Key(EvDevicePtr device, struct input_event* ev)
+Event_Key(EvdevPtr device, struct input_event* ev)
 {
     AssignBit(device->key_state_bitmask, ev->code, ev->value);
 }
 
 static void
-SemiMtSetAbsPressure(EvDevicePtr device, struct input_event* ev)
+SemiMtSetAbsPressure(EvdevPtr device, struct input_event* ev)
 {
     /*
      * Update all active slots with the same ABS_PRESSURE value if it is a
@@ -536,7 +537,7 @@ SemiMtSetAbsPressure(EvDevicePtr device, struct input_event* ev)
 }
 
 static void
-Event_Abs(EvDevicePtr device, struct input_event* ev)
+Event_Abs(EvdevPtr device, struct input_event* ev)
 {
     if (ev->code == ABS_MT_SLOT)
         MT_Slot_Set(device, ev->value);
@@ -547,7 +548,7 @@ Event_Abs(EvDevicePtr device, struct input_event* ev)
 }
 
 static void
-Event_Abs_MT(EvDevicePtr device, struct input_event* ev)
+Event_Abs_MT(EvdevPtr device, struct input_event* ev)
 {
     EventStatePtr evstate = device->evstate;
     struct input_absinfo* axis = evstate->mt_axes[MT_CODE(ev->code)];

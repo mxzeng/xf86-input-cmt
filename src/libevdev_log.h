@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct EvDevice_;
-typedef struct EvDevice_ *EvDevicePtr;
+struct Evdev_;
+typedef struct Evdev_ *EvdevPtr;
 
 #define LOGLEVEL_DEBUG 0
 #define LOGLEVEL_WARNING 1

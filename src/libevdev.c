@@ -28,21 +28,21 @@
 #define EVIOCSCLOCKID  _IOW('E', 0xa0, int)
 #endif
 
-static void Absinfo_Print(EvDevicePtr device, struct input_absinfo*);
+static void Absinfo_Print(EvdevPtr device, struct input_absinfo*);
 static const char* Event_Property_To_String(int type);
 
-int EvdevOpen(EvDevicePtr evdev, const char* device) {
+int EvdevOpen(EvdevPtr evdev, const char* device) {
   evdev->fd = open(device, O_RDWR | O_NONBLOCK, 0);
   return evdev->fd;
 }
 
-int EvdevClose(EvDevicePtr evdev) {
+int EvdevClose(EvdevPtr evdev) {
   close(evdev->fd);
   evdev->fd = -1;
   return evdev->fd;
 }
 
-int EvdevRead(EvDevicePtr evdev) {
+int EvdevRead(EvdevPtr evdev) {
   struct input_event ev[NUM_EVENTS];
   int i;
   int len;
@@ -82,10 +82,10 @@ int EvdevRead(EvDevicePtr evdev) {
   return Success;
 }
 
-int EvdevProbe(EvDevicePtr device) {
+int EvdevProbe(EvdevPtr device) {
   int len, i;
   int fd;
-  EvDeviceInfoPtr info;
+  EvdevInfoPtr info;
 
   fd = device->fd;
   info = &device->info;
@@ -197,7 +197,7 @@ int EvdevProbe(EvDevicePtr device) {
   return Success;
 }
 
-int EvdevProbeAbsinfo(EvDevicePtr device, size_t key) {
+int EvdevProbeAbsinfo(EvdevPtr device, size_t key) {
   struct input_absinfo* absinfo;
 
   absinfo = &device->info.absinfo[key];
@@ -210,7 +210,7 @@ int EvdevProbeAbsinfo(EvDevicePtr device, size_t key) {
   }
 }
 
-int EvdevProbeMTSlot(EvDevicePtr device, MTSlotInfoPtr req) {
+int EvdevProbeMTSlot(EvdevPtr device, MTSlotInfoPtr req) {
   if (ioctl(device->fd, EVIOCGMTSLOTS((sizeof(req))), &req) < 0) {
       LOG_ERROR(device, "ioctl EVIOCGMTSLOTS(req.code=%d) failed: %s\n",
           req->code, strerror(errno));
@@ -220,7 +220,7 @@ int EvdevProbeMTSlot(EvDevicePtr device, MTSlotInfoPtr req) {
   }
 }
 
-int EvdevProbeKeyState(EvDevicePtr device) {
+int EvdevProbeKeyState(EvdevPtr device) {
   int len = sizeof(device->key_state_bitmask);
 
   memset(device->key_state_bitmask, 0, len);
@@ -232,7 +232,7 @@ int EvdevProbeKeyState(EvDevicePtr device) {
   }
 }
 
-int EvdevEnableMonotonic(EvDevicePtr device) {
+int EvdevEnableMonotonic(EvdevPtr device) {
   unsigned int clk = CLOCK_MONOTONIC;
   return (ioctl(device->fd, EVIOCSCLOCKID, &clk) == 0) ? Success : !Success;
 }
@@ -250,7 +250,7 @@ Event_Property_To_String(int type) {
 }
 
 static void
-Absinfo_Print(EvDevicePtr device, struct input_absinfo* absinfo)
+Absinfo_Print(EvdevPtr device, struct input_absinfo* absinfo)
 {
     LOG_DEBUG(device, "    min = %d\n", absinfo->minimum);
     LOG_DEBUG(device, "    max = %d\n", absinfo->maximum);

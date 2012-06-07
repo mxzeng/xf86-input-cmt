@@ -43,15 +43,15 @@ typedef struct {
     int distance;           /* Contact hover distance */
 } MtSlotRec, *MtSlotPtr;
 
-int MTB_Init(EvDevicePtr, int, int, int);
-void MT_Free(EvDevicePtr);
+int MTB_Init(EvdevPtr, int, int, int);
+void MT_Free(EvdevPtr);
 
-void MT_Print_Slots(EvDevicePtr);
-void MT_Slot_Set(EvDevicePtr, int);
+void MT_Print_Slots(EvdevPtr);
+void MT_Slot_Set(EvdevPtr, int);
 
 int MT_Slot_Value_Get(MtSlotPtr, int);
 void MT_Slot_Value_Set(MtSlotPtr, int, int);
 
-void MT_Slot_Sync(EvDevicePtr, MTSlotInfoPtr);
+void MT_Slot_Sync(EvdevPtr, MTSlotInfoPtr);
 
 #endif

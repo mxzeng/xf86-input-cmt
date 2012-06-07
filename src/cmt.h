@@ -69,7 +69,7 @@ typedef struct {
     EventStateRec evstate;
     GestureRec gesture;
     GesturesProp* prop_list;
-    EvDevice evdev;
+    Evdev evdev;
 
     char* device;
     long  handlers;

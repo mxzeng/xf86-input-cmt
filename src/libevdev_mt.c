@@ -26,7 +26,7 @@ const char *mt_axis_names[] = {
     "Distance",
 };
 
-static void MT_Slot_Print(EvDevicePtr, MtSlotPtr);
+static void MT_Slot_Print(EvdevPtr, MtSlotPtr);
 
 /**
  * MT Slot Accessors
@@ -109,7 +109,7 @@ MT_Slot_Value_Set(MtSlotPtr slot, int code, int value)
 }
 
 int
-MTB_Init(EvDevicePtr cmt, int min, int max, int current)
+MTB_Init(EvdevPtr cmt, int min, int max, int current)
 {
     EventStatePtr evstate = cmt->evstate;
     int i;
@@ -130,7 +130,7 @@ MTB_Init(EvDevicePtr cmt, int min, int max, int current)
 }
 
 void
-MT_Free(EvDevicePtr cmt)
+MT_Free(EvdevPtr cmt)
 {
     EventStatePtr evstate = cmt->evstate;
 
@@ -139,7 +139,7 @@ MT_Free(EvDevicePtr cmt)
 }
 
 void
-MT_Slot_Set(EvDevicePtr cmt, int value)
+MT_Slot_Set(EvdevPtr cmt, int value)
 {
     EventStatePtr evstate = cmt->evstate;
     int slot_min = evstate->slot_min;
@@ -157,7 +157,7 @@ MT_Slot_Set(EvDevicePtr cmt, int value)
 
 
 static void
-MT_Slot_Print(EvDevicePtr cmt, MtSlotPtr slot)
+MT_Slot_Print(EvdevPtr cmt, MtSlotPtr slot)
 {
     EventStatePtr evstate = cmt->evstate;
     int i;
@@ -175,7 +175,7 @@ MT_Slot_Print(EvDevicePtr cmt, MtSlotPtr slot)
 }
 
 void
-MT_Print_Slots(EvDevicePtr cmt)
+MT_Print_Slots(EvdevPtr cmt)
 {
     EventStatePtr evstate = cmt->evstate;
     int slot_min = evstate->slot_min;
@@ -192,7 +192,7 @@ MT_Print_Slots(EvDevicePtr cmt)
 }
 
 void
-MT_Slot_Sync(EvDevicePtr cmt, MTSlotInfoPtr slot_info)
+MT_Slot_Sync(EvdevPtr cmt, MTSlotInfoPtr slot_info)
 {
     EventStatePtr evstate = cmt->evstate;
     int i;

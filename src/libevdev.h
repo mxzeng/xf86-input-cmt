@@ -21,7 +21,7 @@
 typedef void (*syn_report_callback)(void*, EventStatePtr, struct timeval*);
 typedef void (*log_callback)(void*, int level, const char*, ...);
 
-struct EvDeviceInfo_ {
+struct EvdevInfo_ {
   struct input_id id;
   char name[1024];
 
@@ -34,9 +34,9 @@ struct EvDeviceInfo_ {
   unsigned long prop_bitmask[NLONGS(INPUT_PROP_CNT)];
   int is_monotonic:1;
 };
-typedef struct EvDeviceInfo_ EvDeviceInfo, *EvDeviceInfoPtr;
+typedef struct EvdevInfo_ EvdevInfo, *EvdevInfoPtr;
 
-struct EvDevice_ {
+struct Evdev_ {
   syn_report_callback syn_report;
   void* syn_report_udata;
 
@@ -47,20 +47,20 @@ struct EvDevice_ {
   int fd;
 
   unsigned long key_state_bitmask[NLONGS(KEY_CNT)];
-  EvDeviceInfo info;
+  EvdevInfo info;
 
   struct timeval before_sync_time;
   struct timeval after_sync_time;
 };
-typedef struct EvDevice_ EvDevice, *EvDevicePtr;
+typedef struct Evdev_ Evdev, *EvdevPtr;
 
-int EvdevOpen(EvDevicePtr, const char*);
-int EvdevClose(EvDevicePtr);
-int EvdevRead(EvDevicePtr);
-int EvdevProbe(EvDevicePtr);
-int EvdevProbeAbsinfo(EvDevicePtr device, size_t key);
-int EvdevProbeMTSlot(EvDevicePtr device, MTSlotInfoPtr req);
-int EvdevProbeKeyState(EvDevicePtr device);
-int EvdevEnableMonotonic(EvDevicePtr device);
+int EvdevOpen(EvdevPtr, const char*);
+int EvdevClose(EvdevPtr);
+int EvdevRead(EvdevPtr);
+int EvdevProbe(EvdevPtr);
+int EvdevProbeAbsinfo(EvdevPtr device, size_t key);
+int EvdevProbeMTSlot(EvdevPtr device, MTSlotInfoPtr req);
+int EvdevProbeKeyState(EvdevPtr device);
+int EvdevEnableMonotonic(EvdevPtr device);
 
 #endif
