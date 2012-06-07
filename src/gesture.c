@@ -391,3 +391,13 @@ Gesture_TimerCallback(OsTimerPtr timer,
     xf86UnblockSIGIO(sigstate);
     return 0;
 }
+
+_X_EXPORT void gestures_log(int verb, const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  if (verb > 0)
+    xf86VDrvMsgVerb(-1, X_INFO, 7, fmt, args);
+  else
+    xf86VDrvMsgVerb(-1, X_ERROR, 0, fmt, args);
+  va_end(args);
+}
