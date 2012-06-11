@@ -14,7 +14,7 @@
 #include <xf86.h>
 #include <xf86Xinput.h>
 
-#include "libevdev_event.h"
+#include "libevdev/libevdev.h"
 #include "properties.h"
 
 typedef struct {
