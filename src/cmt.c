@@ -213,11 +213,13 @@ ReadInput(InputInfoPtr info)
     CmtDevicePtr cmt = info->private;
 
     int err = EvdevRead(&cmt->evdev);
-    if (err == ENODEV) {
-        xf86RemoveEnabledDevice(info);
-        info->fd = EvdevClose(&cmt->evdev);
-    } else if (err != EAGAIN) {
-        ERR(info, "Read error: %s\n", strerror(errno));
+    if (err != Success) {
+      if (err == ENODEV) {
+          xf86RemoveEnabledDevice(info);
+          info->fd = EvdevClose(&cmt->evdev);
+      } else if (err != EAGAIN) {
+          ERR(info, "Read error: %s\n", strerror(err));
+      }
     }
 }
 
