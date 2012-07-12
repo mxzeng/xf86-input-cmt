@@ -68,6 +68,10 @@ Error_Alloc_Fingers:
 void
 Gesture_Free(GesturePtr rec)
 {
+    if (rec->fingers) {
+        free(rec->fingers);
+        rec->fingers = NULL;
+    }
     DeleteGestureInterpreter(rec->interpreter);
     rec->interpreter = NULL;
     rec->dev = NULL;
