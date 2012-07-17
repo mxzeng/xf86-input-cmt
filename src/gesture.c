@@ -76,6 +76,11 @@ Error_Alloc_Fingers:
 void
 Gesture_Free(GesturePtr rec)
 {
+    // free gesture interpreter first, this will cancel all timers.
+    DeleteGestureInterpreter(rec->interpreter);
+    rec->interpreter = NULL;
+    rec->dev = NULL;
+
     if (rec->mask) {
         valuator_mask_free(rec->mask);
         rec->mask = NULL;
@@ -84,9 +89,6 @@ Gesture_Free(GesturePtr rec)
         free(rec->fingers);
         rec->fingers = NULL;
     }
-    DeleteGestureInterpreter(rec->interpreter);
-    rec->interpreter = NULL;
-    rec->dev = NULL;
 }
 
 void
