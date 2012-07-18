@@ -81,10 +81,8 @@ Gesture_Free(GesturePtr rec)
     rec->interpreter = NULL;
     rec->dev = NULL;
 
-    if (rec->mask) {
-        valuator_mask_free(rec->mask);
-        rec->mask = NULL;
-    }
+    valuator_mask_free(&rec->mask);
+
     if (rec->fingers) {
         free(rec->fingers);
         rec->fingers = NULL;
