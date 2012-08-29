@@ -314,6 +314,9 @@ static void Gesture_Gesture_Ready(void* client_data,
             xf86PostButtonEventM(dev, TRUE, button, 1, rec->mask);
             xf86PostButtonEventM(dev, TRUE, button, 0, rec->mask);
             break;
+        case kGestureTypePinch:
+            DBG(info, "Gesture Pinch: dz=%f\n", gesture->details.pinch.dz);
+            break;
         default:
             ERR(info, "Unrecognized gesture type (%u)\n", gesture->type);
             break;
