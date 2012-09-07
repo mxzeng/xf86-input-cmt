@@ -202,8 +202,6 @@ static void SetTimeValues(ValuatorMask* mask,
 {
     float start_float = gesture->start_time;
     float end_float = gesture->end_time;
-    unsigned int start_int;
-    unsigned int end_int;
 
     if (!is_absolute) {
         /*
@@ -215,13 +213,8 @@ static void SetTimeValues(ValuatorMask* mask,
         end_float -= dev->last.valuators[CMT_AXIS_DBL_END_TIME];
     }
 
-    start_int = (unsigned long long)(1000.0L * start_float) & 0x0FFFFFFFFLL;
-    end_int = (unsigned long long)(1000.0L * end_float) & 0x0FFFFFFFFLL;
-
     valuator_mask_set_double(mask, CMT_AXIS_DBL_START_TIME, start_float);
     valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_float);
-    valuator_mask_set(mask, CMT_AXIS_START_TIME, start_int);
-    valuator_mask_set(mask, CMT_AXIS_END_TIME, end_int);
 }
 
 static void SetFlingValues(ValuatorMask* mask,
