@@ -14,8 +14,6 @@
 #include "cmt.h"
 #include "properties.h"
 
-#define MAX_VALUATORS 16
-
 /*
  * Gestures timer functions
  */
