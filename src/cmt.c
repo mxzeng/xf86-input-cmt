@@ -62,7 +62,8 @@ static Bool DeviceClose(DeviceIntPtr);
 static Bool OpenDevice(InputInfoPtr);
 static int InitializeXDevice(DeviceIntPtr dev);
 
-static void libevdev_log_x(void* udata, int level, const char* format, ...);
+static void libevdev_log_x(void* udata, int level, const char* format, ...)
+    _X_ATTRIBUTE_PRINTF(3, 4);
 
 /*
  * Implementation of log method for libevdev
