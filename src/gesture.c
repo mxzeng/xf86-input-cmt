@@ -223,15 +223,8 @@ static void SetFlingValues(ValuatorMask* mask,
     float vx_float = gesture->details.fling.vx;
     float vy_float = gesture->details.fling.vy;
 
-    unsigned int vx_int =
-        (unsigned long long)(1000.0L * vx_float) & 0x0FFFFFFFFLL;
-    unsigned int vy_int =
-        (unsigned long long)(1000.0L * vy_float) & 0x0FFFFFFFFLL;
-
     valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, vx_float);
     valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, vy_float);
-    valuator_mask_set(mask, CMT_AXIS_FLING_VX, vx_int);
-    valuator_mask_set(mask, CMT_AXIS_FLING_VY, vy_int);
     valuator_mask_set(
         mask, CMT_AXIS_FLING_STATE, gesture->details.fling.fling_state);
 }

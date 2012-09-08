@@ -27,14 +27,12 @@
 #error Unsupported XInput version. Major version 12 and above required.
 #endif
 
-#define AXIS_LABEL_PROP_ABS_FLING_VX       "Abs Fling X Velocity"
-#define AXIS_LABEL_PROP_ABS_FLING_VY       "Abs Fling Y Velocity"
 #define AXIS_LABEL_PROP_ABS_FLING_STATE    "Abs Fling State"
+#define AXIS_LABEL_PROP_ABS_DBL_FLING_VX   "Abs Dbl Fling X Velocity"
+#define AXIS_LABEL_PROP_ABS_DBL_FLING_VY   "Abs Dbl Fling Y Velocity"
 
 #define AXIS_LABEL_PROP_ABS_DBL_START_TIME "Abs Dbl Start Timestamp"
 #define AXIS_LABEL_PROP_ABS_DBL_END_TIME   "Abs Dbl End Timestamp"
-#define AXIS_LABEL_PROP_ABS_DBL_FLING_VX   "Abs Dbl Fling X Velocity"
-#define AXIS_LABEL_PROP_ABS_DBL_FLING_VY   "Abs Dbl Fling Y Velocity"
 /**
  * Forward declarations
  */
@@ -355,8 +353,6 @@ InitializeXDevice(DeviceIntPtr dev)
         AXIS_LABEL_PROP_REL_Y,
         AXIS_LABEL_PROP_REL_HWHEEL,
         AXIS_LABEL_PROP_REL_WHEEL,
-        AXIS_LABEL_PROP_ABS_FLING_VX,
-        AXIS_LABEL_PROP_ABS_FLING_VY,
         AXIS_LABEL_PROP_ABS_FLING_STATE,
         AXIS_LABEL_PROP_ABS_DBL_FLING_VX,
         AXIS_LABEL_PROP_ABS_DBL_FLING_VY,
