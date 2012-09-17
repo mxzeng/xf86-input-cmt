@@ -253,7 +253,6 @@ DeviceOn(DeviceIntPtr dev)
         return rc;
     Event_Open(&cmt->evdev);
 
-    xf86FlushInput(info->fd);
     xf86AddEnabledDevice(info);
     dev->public.on = TRUE;
     Gesture_Device_On(&cmt->gesture);
