@@ -365,6 +365,7 @@ Gesture_TimerCallback(OsTimerPtr timer,
     GesturesTimer* tm = callback_data;
     stime_t now;
     stime_t rc;
+    CARD32 next_timeout = 0;
 
     if (tm->is_monotonic) {
       struct timespec ts;
@@ -378,13 +379,12 @@ Gesture_TimerCallback(OsTimerPtr timer,
 
     rc = tm->callback(now, tm->callback_data);
     if (rc >= 0.0) {
-        CARD32 ms = rc * 1000.0;
-        if (ms == 0)
-            ms = 1;
-        TimerSet(timer, 0, ms, Gesture_TimerCallback, tm);
+        next_timeout = rc * 1000.0;
+        if (next_timeout == 0)
+            next_timeout = 1;
     }
 
-    return 0;
+    return next_timeout;
 }
 
 _X_EXPORT void gestures_log(int verb, const char* fmt, ...) {
