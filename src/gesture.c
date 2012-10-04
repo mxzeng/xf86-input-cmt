@@ -246,8 +246,8 @@ static void Gesture_Gesture_Ready(void* client_data,
             /* TODO(adlr): handle contact initiated */
             break;
         case kGestureTypeMove:
-            DBG(info, "Gesture Move: (%d, %d)\n",
-                (int)gesture->details.move.dx, (int)gesture->details.move.dy);
+            DBG(info, "Gesture Move: (%f, %f)\n",
+                gesture->details.move.dx, gesture->details.move.dy);
             valuator_mask_set_double(
                 rec->mask, CMT_AXIS_X, gesture->details.move.dx);
             valuator_mask_set_double(
