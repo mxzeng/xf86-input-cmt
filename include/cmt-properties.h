@@ -36,6 +36,10 @@
 #define CMT_PROP_RES_Y       "Vertical Resolution"
 #define CMT_PROP_RES_X       "Horizontal Resolution"
 
+/* 32 bit */
+#define CMT_PROP_ORIENTATION_MINIMUM "Orientation Minimum"
+#define CMT_PROP_ORIENTATION_MAXIMUM "Orientation Maximum"
+
 /* Bool */
 #define CMT_PROP_SCROLL_BTN  "Scroll Buttons"
 #define CMT_PROP_SCROLL_AXES "Scroll Axes"

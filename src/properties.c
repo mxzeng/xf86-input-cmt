@@ -136,6 +136,17 @@ PropertiesInit(DeviceIntPtr dev)
     PropCreate_Int(dev, CMT_PROP_RES_X, &props->res_x,
                    Event_Get_Res_X(&cmt->evdev));
 
+    /*
+     * Trackpad orientation minimum/maximum. If not configured in .conf file,
+     * use min/max as reported by kernel driver.
+     */
+    PropCreate_Int(dev, CMT_PROP_ORIENTATION_MINIMUM,
+                   &props->orientation_minimum,
+                   Event_Get_Orientation_Minimum(&cmt->evdev));
+    PropCreate_Int(dev, CMT_PROP_ORIENTATION_MAXIMUM,
+                   &props->orientation_maximum,
+                   Event_Get_Orientation_Maximum(&cmt->evdev));
+
     dump_debug_log_prop = PropCreate_Bool(dev,
                                           CMT_PROP_DUMP_DEBUG_LOG,
                                           &props->dump_debug_log,
