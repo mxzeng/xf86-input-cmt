@@ -194,6 +194,10 @@ Gesture_Process_Slots(void* vrec,
     hwstate.touch_cnt = Event_Get_Touch_Count(evdev);
     hwstate.finger_cnt = current_finger;
     hwstate.fingers = rec->fingers;
+    hwstate.rel_x = evstate->rel_x;
+    hwstate.rel_y = evstate->rel_y;
+    hwstate.rel_wheel = evstate->rel_wheel;
+    hwstate.rel_hwheel = evstate->rel_hwheel;
     GestureInterpreterPushHardwareState(rec->interpreter, &hwstate);
 }
 
