@@ -118,9 +118,10 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     /* buttonpad means a physical button under the touch surface */
     hwprops.is_button_pad   = Event_Get_Button_Pad(evdev);
 
-    GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
     GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
                                       rec->dev);
+    GestureInterpreterInitialize(rec->interpreter);
+    GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
 }
 
 void
