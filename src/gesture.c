@@ -48,6 +48,8 @@ static GesturesTimerProvider Gesture_GesturesTimerProvider = {
 static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture);
 
+static enum GestureInterpreterDeviceClass Gesture_Device_Class(EvdevClass cls);
+
 int
 Gesture_Init(GesturePtr rec, size_t max_fingers)
 {
@@ -120,7 +122,9 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
 
     GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
                                       rec->dev);
-    GestureInterpreterInitialize(rec->interpreter);
+    GestureInterpreterInitialize(
+            rec->interpreter,
+            Gesture_Device_Class(cmt->evdev.info.evdev_class));
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
 }
 
@@ -392,6 +396,18 @@ Gesture_TimerCallback(OsTimerPtr timer,
     }
 
     return next_timeout;
+}
+
+static enum GestureInterpreterDeviceClass
+Gesture_Device_Class(EvdevClass cls) {
+  switch (cls) {
+    case EvdevClassMouse:
+      return GESTURES_DEVCLASS_MOUSE;
+    case EvdevClassTouchpad:
+      return GESTURES_DEVCLASS_TOUCHPAD;
+    default:
+      return GESTURES_DEVCLASS_UNKNOWN;
+  }
 }
 
 _X_EXPORT void gestures_log(int verb, const char* fmt, ...) {
