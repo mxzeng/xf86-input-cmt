@@ -273,6 +273,7 @@ static void Gesture_Gesture_Ready(void* client_data,
                 rec->mask, CMT_AXIS_SCROLL_X, gesture->details.scroll.dx);
             valuator_mask_set_double(
                 rec->mask, CMT_AXIS_SCROLL_Y, gesture->details.scroll.dy);
+            valuator_mask_set_double(rec->mask, CMT_AXIS_FINGER_COUNT, 2.0);
             SetTimeValues(rec->mask, gesture, dev, TRUE);
             xf86PostMotionEventM(dev, TRUE, rec->mask);
             break;
@@ -302,12 +303,16 @@ static void Gesture_Gesture_Ready(void* client_data,
             xf86PostMotionEventM(dev, TRUE, rec->mask);
             break;
         case kGestureTypeSwipe:
-            DBG(info, "Gesture Swipe: dx=%f\n", gesture->details.swipe.dx);
+            DBG(info, "Gesture Swipe: dx=%f dy=%f\n",
+                gesture->details.swipe.dx,
+                gesture->details.swipe.dy);
+            valuator_mask_set_double(
+                rec->mask, CMT_AXIS_SCROLL_X, gesture->details.swipe.dx);
+            valuator_mask_set_double(
+                rec->mask, CMT_AXIS_SCROLL_Y, gesture->details.swipe.dy);
+            valuator_mask_set_double(rec->mask, CMT_AXIS_FINGER_COUNT, 3.0);
             SetTimeValues(rec->mask, gesture, dev, TRUE);
-            button = gesture->details.swipe.dx > 0.f ?
-                CMT_BTN_FORWARD : CMT_BTN_BACK;
-            xf86PostButtonEventM(dev, TRUE, button, 1, rec->mask);
-            xf86PostButtonEventM(dev, TRUE, button, 0, rec->mask);
+            xf86PostMotionEventM(dev, TRUE, rec->mask);
             break;
         case kGestureTypePinch:
             DBG(info, "Gesture Pinch: dz=%f\n", gesture->details.pinch.dz);

@@ -33,6 +33,8 @@
 
 #define AXIS_LABEL_PROP_ABS_DBL_START_TIME "Abs Dbl Start Timestamp"
 #define AXIS_LABEL_PROP_ABS_DBL_END_TIME   "Abs Dbl End Timestamp"
+
+#define AXIS_LABEL_PROP_ABS_FINGER_COUNT   "Abs Finger Count"
 /**
  * Forward declarations
  */
@@ -356,7 +358,8 @@ InitializeXDevice(DeviceIntPtr dev)
         AXIS_LABEL_PROP_ABS_DBL_FLING_VX,
         AXIS_LABEL_PROP_ABS_DBL_FLING_VY,
         AXIS_LABEL_PROP_ABS_DBL_START_TIME,
-        AXIS_LABEL_PROP_ABS_DBL_END_TIME
+        AXIS_LABEL_PROP_ABS_DBL_END_TIME,
+        AXIS_LABEL_PROP_ABS_FINGER_COUNT
     };
     static const char* btn_names[CMT_NUM_BUTTONS] = {
         BTN_LABEL_PROP_BTN_LEFT,
