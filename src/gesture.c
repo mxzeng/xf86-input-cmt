@@ -228,103 +228,95 @@ static void SetTimeValues(ValuatorMask* mask,
     valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_time);
 }
 
-static void SetFlingValues(ValuatorMask* mask,
-                           const struct Gesture* gesture)
-{
-    float vx_float = gesture->details.fling.vx;
-    float vy_float = gesture->details.fling.vy;
-
-    valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, vx_float);
-    valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, vy_float);
-    valuator_mask_set(
-        mask, CMT_AXIS_FLING_STATE, gesture->details.fling.fling_state);
-}
-
 static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture)
 {
     GesturePtr rec = client_data;
     DeviceIntPtr dev = rec->dev;
+    ValuatorMask* mask = rec->mask;
     InputInfoPtr info = dev->public.devicePrivate;
-    int button;
 
     DBG(info, "Gesture Start: %f End: %f \n",
         gesture->start_time, gesture->end_time);
 
-    valuator_mask_zero(rec->mask);
+    valuator_mask_zero(mask);
     switch (gesture->type) {
         case kGestureTypeContactInitiated:
             /* TODO(adlr): handle contact initiated */
             break;
-        case kGestureTypeMove:
-            DBG(info, "Gesture Move: (%f, %f)\n",
-                gesture->details.move.dx, gesture->details.move.dy);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_X, gesture->details.move.dx);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_Y, gesture->details.move.dy);
-            SetTimeValues(rec->mask, gesture, dev, FALSE);
-            xf86PostMotionEventM(dev, FALSE, rec->mask);
+        case kGestureTypeMove: {
+            const GestureMove* move = &gesture->details.move;
+            DBG(info, "Gesture Move: (%f, %f)\n", move->dx, move->dy);
+            valuator_mask_set_double(mask, CMT_AXIS_X, move->dx);
+            valuator_mask_set_double(mask, CMT_AXIS_Y, move->dy);
+            SetTimeValues(mask, gesture, dev, FALSE);
+            xf86PostMotionEventM(dev, FALSE, mask);
             break;
-        case kGestureTypeScroll:
-            DBG(info, "Gesture Scroll: (%f, %f)\n",
-                gesture->details.scroll.dx, gesture->details.scroll.dy);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_SCROLL_X, gesture->details.scroll.dx);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_SCROLL_Y, gesture->details.scroll.dy);
-            valuator_mask_set_double(rec->mask, CMT_AXIS_FINGER_COUNT, 2.0);
-            SetTimeValues(rec->mask, gesture, dev, TRUE);
-            xf86PostMotionEventM(dev, TRUE, rec->mask);
+        }
+        case kGestureTypeScroll: {
+            const GestureScroll* scroll = &gesture->details.scroll;
+            DBG(info, "Gesture Scroll: (%f, %f)\n", scroll->dx, scroll->dy);
+            valuator_mask_set_double(mask, CMT_AXIS_SCROLL_X, scroll->dx);
+            valuator_mask_set_double(mask, CMT_AXIS_SCROLL_Y, scroll->dy);
+            valuator_mask_set_double(mask, CMT_AXIS_FINGER_COUNT, 2.0);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
-        case kGestureTypeButtonsChange:
+        }
+        case kGestureTypeButtonsChange: {
+            const GestureButtonsChange* buttons = &gesture->details.buttons;
             DBG(info, "Gesture Button Change: down=0x%02x up=0x%02x\n",
-                gesture->details.buttons.down, gesture->details.buttons.up);
-            SetTimeValues(rec->mask, gesture, dev, TRUE);
-            if (gesture->details.buttons.down & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 1, rec->mask);
-            if (gesture->details.buttons.down & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 1, rec->mask);
-            if (gesture->details.buttons.down & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 1, rec->mask);
-            if (gesture->details.buttons.up & GESTURES_BUTTON_LEFT)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 0, rec->mask);
-            if (gesture->details.buttons.up & GESTURES_BUTTON_MIDDLE)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 0, rec->mask);
-            if (gesture->details.buttons.up & GESTURES_BUTTON_RIGHT)
-                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 0, rec->mask);
+                buttons->down, buttons->up);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            if (buttons->down & GESTURES_BUTTON_LEFT)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 1, mask);
+            if (buttons->down & GESTURES_BUTTON_MIDDLE)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 1, mask);
+            if (buttons->down & GESTURES_BUTTON_RIGHT)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 1, mask);
+            if (buttons->up & GESTURES_BUTTON_LEFT)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 0, mask);
+            if (buttons->up & GESTURES_BUTTON_MIDDLE)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 0, mask);
+            if (buttons->up & GESTURES_BUTTON_RIGHT)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 0, mask);
             break;
-        case kGestureTypeFling:
+        }
+        case kGestureTypeFling: {
+            const GestureFling* fling = &gesture->details.fling;
             DBG(info, "Gesture Fling: vx=%f vy=%f fling_state=%d\n",
-                gesture->details.fling.vx, gesture->details.fling.vy,
-                gesture->details.fling.fling_state);
-            SetTimeValues(rec->mask, gesture, dev, TRUE);
-            SetFlingValues(rec->mask, gesture);
-            xf86PostMotionEventM(dev, TRUE, rec->mask);
+                fling->vx, fling->vy, fling->fling_state);
+            valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, fling->vx);
+            valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, fling->vy);
+            valuator_mask_set(mask, CMT_AXIS_FLING_STATE, fling->fling_state);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
-        case kGestureTypeSwipe:
-            DBG(info, "Gesture Swipe: dx=%f dy=%f\n",
-                gesture->details.swipe.dx,
-                gesture->details.swipe.dy);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_SCROLL_X, gesture->details.swipe.dx);
-            valuator_mask_set_double(
-                rec->mask, CMT_AXIS_SCROLL_Y, gesture->details.swipe.dy);
-            valuator_mask_set_double(rec->mask, CMT_AXIS_FINGER_COUNT, 3.0);
-            SetTimeValues(rec->mask, gesture, dev, TRUE);
-            xf86PostMotionEventM(dev, TRUE, rec->mask);
+        }
+        case kGestureTypeSwipe: {
+            const GestureSwipe* swipe = &gesture->details.swipe;
+            DBG(info, "Gesture Swipe: dx=%f dy=%f\n", swipe->dx, swipe->dy);
+            valuator_mask_set_double(mask, CMT_AXIS_SCROLL_X, swipe->dx);
+            valuator_mask_set_double(mask, CMT_AXIS_SCROLL_Y, swipe->dy);
+            valuator_mask_set_double(mask, CMT_AXIS_FINGER_COUNT, 3.0);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
+        }
         case kGestureTypeSwipeLift:
             DBG(info, "Gesture Swipe Lift\n");
             // Turn a swipe lift into a fling start.
-            SetTimeValues(rec->mask, gesture, dev, TRUE);
-            valuator_mask_set_double(rec->mask, CMT_AXIS_DBL_FLING_VX, 0);
-            valuator_mask_set_double(rec->mask, CMT_AXIS_DBL_FLING_VY, 0);
-            valuator_mask_set(rec->mask, CMT_AXIS_FLING_STATE, 0);
-            xf86PostMotionEventM(dev, TRUE, rec->mask);
-        case kGestureTypePinch:
-            DBG(info, "Gesture Pinch: dz=%f\n", gesture->details.pinch.dz);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, 0);
+            valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, 0);
+            valuator_mask_set(mask, CMT_AXIS_FLING_STATE, 0);
+            xf86PostMotionEventM(dev, TRUE, mask);
             break;
+        case kGestureTypePinch: {
+            const GesturePinch* pinch = &gesture->details.pinch;
+            DBG(info, "Gesture Pinch: dz=%f\n", pinch->dz);
+            break;
+        }
         default:
             ERR(info, "Unrecognized gesture type (%u)\n", gesture->type);
             break;
