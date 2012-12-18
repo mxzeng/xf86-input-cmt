@@ -211,8 +211,8 @@ static void SetTimeValues(ValuatorMask* mask,
                           DeviceIntPtr dev,
                           BOOL is_absolute)
 {
-    float start_float = gesture->start_time;
-    float end_float = gesture->end_time;
+    double start_time = gesture->start_time;
+    double end_time = gesture->end_time;
 
     if (!is_absolute) {
         /*
@@ -220,12 +220,12 @@ static void SetTimeValues(ValuatorMask* mask,
          * times to be sent as relative values too. This code computes the
          * right relative values.
          */
-        start_float -= dev->last.valuators[CMT_AXIS_DBL_START_TIME];
-        end_float -= dev->last.valuators[CMT_AXIS_DBL_END_TIME];
+        start_time -= dev->last.valuators[CMT_AXIS_DBL_START_TIME];
+        end_time -= dev->last.valuators[CMT_AXIS_DBL_END_TIME];
     }
 
-    valuator_mask_set_double(mask, CMT_AXIS_DBL_START_TIME, start_float);
-    valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_float);
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_START_TIME, start_time);
+    valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_time);
 }
 
 static void SetFlingValues(ValuatorMask* mask,
