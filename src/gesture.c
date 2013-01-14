@@ -412,6 +412,8 @@ Gesture_Device_Class(EvdevClass cls) {
       return GESTURES_DEVCLASS_MULTITOUCH_MOUSE;
     case EvdevClassTouchpad:
       return GESTURES_DEVCLASS_TOUCHPAD;
+    case EvdevClassTouchscreen:
+      return GESTURES_DEVCLASS_TOUCHSCREEN;
     default:
       return GESTURES_DEVCLASS_UNKNOWN;
   }
