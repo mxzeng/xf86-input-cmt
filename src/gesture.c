@@ -408,6 +408,8 @@ Gesture_Device_Class(EvdevClass cls) {
   switch (cls) {
     case EvdevClassMouse:
       return GESTURES_DEVCLASS_MOUSE;
+    case EvdevClassMultitouchMouse:
+      return GESTURES_DEVCLASS_MULTITOUCH_MOUSE;
     case EvdevClassTouchpad:
       return GESTURES_DEVCLASS_TOUCHPAD;
     default:
