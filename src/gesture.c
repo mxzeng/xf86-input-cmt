@@ -314,6 +314,14 @@ static void Gesture_Gesture_Ready(void* client_data,
             SetTimeValues(rec->mask, gesture, dev, TRUE);
             xf86PostMotionEventM(dev, TRUE, rec->mask);
             break;
+        case kGestureTypeSwipeLift:
+            DBG(info, "Gesture Swipe Lift\n");
+            // Turn a swipe lift into a fling start.
+            SetTimeValues(rec->mask, gesture, dev, TRUE);
+            valuator_mask_set_double(rec->mask, CMT_AXIS_DBL_FLING_VX, 0);
+            valuator_mask_set_double(rec->mask, CMT_AXIS_DBL_FLING_VY, 0);
+            valuator_mask_set(rec->mask, CMT_AXIS_FLING_STATE, 0);
+            xf86PostMotionEventM(dev, TRUE, rec->mask);
         case kGestureTypePinch:
             DBG(info, "Gesture Pinch: dz=%f\n", gesture->details.pinch.dz);
             break;
