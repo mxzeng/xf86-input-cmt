@@ -27,6 +27,9 @@
 #error Unsupported XInput version. Major version 12 and above required.
 #endif
 
+#define AXIS_LABEL_PROP_ABS_DBL_ORDINAL_X   "Abs Dbl Ordinal X"
+#define AXIS_LABEL_PROP_ABS_DBL_ORDINAL_Y   "Abs Dbl Ordinal Y"
+
 #define AXIS_LABEL_PROP_ABS_FLING_STATE    "Abs Fling State"
 #define AXIS_LABEL_PROP_ABS_DBL_FLING_VX   "Abs Dbl Fling X Velocity"
 #define AXIS_LABEL_PROP_ABS_DBL_FLING_VY   "Abs Dbl Fling Y Velocity"
@@ -352,6 +355,8 @@ InitializeXDevice(DeviceIntPtr dev)
     static const char* axes_names[CMT_NUM_AXES] = {
         AXIS_LABEL_PROP_REL_X,
         AXIS_LABEL_PROP_REL_Y,
+        AXIS_LABEL_PROP_ABS_DBL_ORDINAL_X,
+        AXIS_LABEL_PROP_ABS_DBL_ORDINAL_Y,
         AXIS_LABEL_PROP_REL_HWHEEL,
         AXIS_LABEL_PROP_REL_WHEEL,
         AXIS_LABEL_PROP_ABS_FLING_STATE,

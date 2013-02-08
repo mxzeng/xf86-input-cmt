@@ -228,6 +228,25 @@ static void SetTimeValues(ValuatorMask* mask,
     valuator_mask_set_double(mask, CMT_AXIS_DBL_END_TIME, end_time);
 }
 
+static void SetOrdinalValues(ValuatorMask* mask,
+                             DeviceIntPtr dev,
+                             float x,
+                             float y,
+                             BOOL is_absolute) {
+    if (!is_absolute) {
+        /*
+         * We send the movement axes as relative values, which causes the
+         * times to be sent as relative values too. This code computes the
+         * right relative values.
+         */
+        x -= dev->last.valuators[CMT_AXIS_ORDINAL_X];
+        y -= dev->last.valuators[CMT_AXIS_ORDINAL_Y];
+    }
+
+    valuator_mask_set_double(mask, CMT_AXIS_ORDINAL_X, x);
+    valuator_mask_set_double(mask, CMT_AXIS_ORDINAL_Y, y);
+}
+
 static void Gesture_Gesture_Ready(void* client_data,
                                   const struct Gesture* gesture)
 {
@@ -246,20 +265,32 @@ static void Gesture_Gesture_Ready(void* client_data,
             break;
         case kGestureTypeMove: {
             const GestureMove* move = &gesture->details.move;
-            DBG(info, "Gesture Move: (%f, %f)\n", move->dx, move->dy);
+            DBG(info, "Gesture Move: (%f, %f) [%f, %f]\n",
+                move->dx, move->dy, move->ordinal_dx, move->ordinal_dy);
             valuator_mask_set_double(mask, CMT_AXIS_X, move->dx);
             valuator_mask_set_double(mask, CMT_AXIS_Y, move->dy);
             SetTimeValues(mask, gesture, dev, FALSE);
+            SetOrdinalValues(mask,
+                             dev,
+                             move->ordinal_dx,
+                             move->ordinal_dy,
+                             FALSE);
             xf86PostMotionEventM(dev, FALSE, mask);
             break;
         }
         case kGestureTypeScroll: {
             const GestureScroll* scroll = &gesture->details.scroll;
-            DBG(info, "Gesture Scroll: (%f, %f)\n", scroll->dx, scroll->dy);
+            DBG(info, "Gesture Scroll: (%f, %f) [%f, %f]\n",
+                scroll->dx, scroll->dy, scroll->ordinal_dx, scroll->ordinal_dy);
             valuator_mask_set_double(mask, CMT_AXIS_SCROLL_X, scroll->dx);
             valuator_mask_set_double(mask, CMT_AXIS_SCROLL_Y, scroll->dy);
             valuator_mask_set_double(mask, CMT_AXIS_FINGER_COUNT, 2.0);
             SetTimeValues(mask, gesture, dev, TRUE);
+            SetOrdinalValues(mask,
+                             dev,
+                             scroll->ordinal_dx,
+                             scroll->ordinal_dy,
+                             TRUE);
             xf86PostMotionEventM(dev, TRUE, mask);
             break;
         }
@@ -284,22 +315,34 @@ static void Gesture_Gesture_Ready(void* client_data,
         }
         case kGestureTypeFling: {
             const GestureFling* fling = &gesture->details.fling;
-            DBG(info, "Gesture Fling: vx=%f vy=%f fling_state=%d\n",
-                fling->vx, fling->vy, fling->fling_state);
+            DBG(info, "Gesture Fling: (%f, %f) [%f, %f] fling_state=%d\n",
+                fling->vx, fling->vy, fling->ordinal_vx, fling->ordinal_vy,
+                fling->fling_state);
             valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VX, fling->vx);
             valuator_mask_set_double(mask, CMT_AXIS_DBL_FLING_VY, fling->vy);
             valuator_mask_set(mask, CMT_AXIS_FLING_STATE, fling->fling_state);
             SetTimeValues(mask, gesture, dev, TRUE);
+            SetOrdinalValues(mask,
+                             dev,
+                             fling->ordinal_vx,
+                             fling->ordinal_vy,
+                             TRUE);
             xf86PostMotionEventM(dev, TRUE, mask);
             break;
         }
         case kGestureTypeSwipe: {
             const GestureSwipe* swipe = &gesture->details.swipe;
-            DBG(info, "Gesture Swipe: dx=%f dy=%f\n", swipe->dx, swipe->dy);
+            DBG(info, "Gesture Swipe: (%f, %f) [%f, %f]\n",
+                swipe->dx, swipe->dy, swipe->ordinal_dx, swipe->ordinal_dy);
             valuator_mask_set_double(mask, CMT_AXIS_SCROLL_X, swipe->dx);
             valuator_mask_set_double(mask, CMT_AXIS_SCROLL_Y, swipe->dy);
             valuator_mask_set_double(mask, CMT_AXIS_FINGER_COUNT, 3.0);
             SetTimeValues(mask, gesture, dev, TRUE);
+            SetOrdinalValues(mask,
+                             dev,
+                             swipe->ordinal_dx,
+                             swipe->ordinal_dy,
+                             TRUE);
             xf86PostMotionEventM(dev, TRUE, mask);
             break;
         }
@@ -314,7 +357,8 @@ static void Gesture_Gesture_Ready(void* client_data,
             break;
         case kGestureTypePinch: {
             const GesturePinch* pinch = &gesture->details.pinch;
-            DBG(info, "Gesture Pinch: dz=%f\n", pinch->dz);
+            DBG(info, "Gesture Pinch: dz=%f [%f]\n",
+                pinch->dz, pinch->ordinal_dz);
             break;
         }
         default:
