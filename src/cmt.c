@@ -94,7 +94,7 @@ static void libevdev_log_x(void* udata, int level, const char* format, ...) {
  */
 _X_EXPORT InputDriverRec CMT = {
     1,
-    "cmt",
+    (char*)"cmt",
     NULL,
     PreInit,
     UnInit,
@@ -114,7 +114,7 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (!cmt)
         return BadAlloc;
 
-    info->type_name               = XI_TOUCHPAD;
+    info->type_name               = (char*)XI_TOUCHPAD;
     info->device_control          = DeviceControl;
     info->read_input              = ReadInput;
     info->control_proc            = NULL;
