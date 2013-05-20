@@ -361,6 +361,19 @@ static void Gesture_Gesture_Ready(void* client_data,
                 pinch->dz, pinch->ordinal_dz);
             break;
         }
+        case kGestureTypeMetrics: {
+            const GestureMetrics* metrics = &gesture->details.metrics;
+            DBG(info, "Gesture Metrics: [%f, %f] type=%d\n",
+                metrics->data[0], metrics->data[1], metrics->type);
+            valuator_mask_set_double(mask, CMT_AXIS_METRICS_DATA1,
+                metrics->data[0]);
+            valuator_mask_set_double(mask, CMT_AXIS_METRICS_DATA2,
+                metrics->data[1]);
+            valuator_mask_set(mask, CMT_AXIS_METRICS_TYPE, metrics->type);
+            SetTimeValues(mask, gesture, dev, TRUE);
+            xf86PostMotionEventM(dev, TRUE, mask);
+            break;
+        }
         default:
             ERR(info, "Unrecognized gesture type (%u)\n", gesture->type);
             break;
