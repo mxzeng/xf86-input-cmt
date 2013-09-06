@@ -117,7 +117,6 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     if (!cmt)
         return BadAlloc;
 
-    info->type_name               = (char*)XI_TOUCHPAD;
     info->device_control          = DeviceControl;
     info->read_input              = ReadInput;
     info->control_proc            = NULL;
@@ -143,6 +142,13 @@ PreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
         }
         goto Error_Event_Init;
     }
+
+    // The cmt driver currently powers mice, multi-touch mice and touchpads.
+    // We list mice as XI_MOUSE and the others as XI_TOUCHPAD.
+    if (cmt->evdev.info.evdev_class == EvdevClassMouse)
+      info->type_name = (char*)XI_MOUSE;
+    else
+      info->type_name = (char*)XI_TOUCHPAD;
 
     xf86ProcessCommonOptions(info, info->options);
 
