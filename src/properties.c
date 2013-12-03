@@ -14,6 +14,7 @@
 
 #include "cmt.h"
 #include "cmt-properties.h"
+#include "gesture.h"
 
 #define COMPILE_ASSERT(expr) COMPILE_ASSERT_IMPL(expr, __LINE__)
 #define COMPILE_ASSERT_JOIN(a, b) a##b
@@ -171,6 +172,12 @@ PropertiesInit(DeviceIntPtr dev)
                                           &bool_false);
     Prop_RegisterHandlers(dev, dump_debug_log_prop, &cmt->evdev, NULL,
                           Event_Dump_Debug_Log);
+
+    PropCreate_Bool(dev,
+                    CMT_PROP_RAW_TOUCH_PASSTHROUGH,
+                    &props->raw_passthrough,
+                    1,
+                    &bool_false);
 
     return Success;
 }

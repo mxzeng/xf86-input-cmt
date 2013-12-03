@@ -17,11 +17,18 @@
 #include "libevdev/libevdev.h"
 #include "properties.h"
 
+enum SLOT_STATUS {
+    SLOT_STATUS_FREE = 0,
+    SLOT_STATUS_RAW,
+    SLOT_STATUS_GESTURE
+};
+
 typedef struct {
     GestureInterpreter* interpreter;  /* The interpreter from Gestures lib */
     DeviceIntPtr dev;
     struct FingerState *fingers;
     ValuatorMask *mask;
+    int *slot_states;  /* Leep track of slot usage between syn reports */
 } GestureRec, *GesturePtr;
 
 int Gesture_Init(GesturePtr, size_t);

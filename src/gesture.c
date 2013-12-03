@@ -54,6 +54,8 @@ int
 Gesture_Init(GesturePtr rec, size_t max_fingers)
 {
     rec->interpreter = NewGestureInterpreter();
+    rec->slot_states = NULL;
+
     if (!rec->interpreter)
         return !Success;
     rec->fingers = malloc(max_fingers * sizeof(struct FingerState));
@@ -87,6 +89,10 @@ Gesture_Free(GesturePtr rec)
         free(rec->fingers);
         rec->fingers = NULL;
     }
+    if(rec->slot_states) {
+        free(rec->slot_states);
+        rec->slot_states = NULL;
+    }
 }
 
 void
@@ -98,6 +104,7 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     EventStatePtr evstate = &cmt->evstate;
     struct HardwareProperties hwprops;
     EvdevPtr evdev = &cmt->evdev;
+    int i;
 
     /* Store the device for which to generate gestures */
     rec->dev = dev;
@@ -126,6 +133,14 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
             rec->interpreter,
             Gesture_Device_Class(cmt->evdev.info.evdev_class));
     GestureInterpreterSetHardwareProperties(rec->interpreter, &hwprops);
+
+    rec->slot_states = malloc(sizeof(int) * evstate->slot_count);
+    if (!rec->slot_states) {
+        ERR(info, "BadAlloc: rec->slot_states");
+        return;
+    }
+    for (i = 0; i < evstate->slot_count; ++i)
+        rec->slot_states[i] = SLOT_STATUS_FREE;
 }
 
 void
@@ -161,23 +176,88 @@ Gesture_Process_Slots(void* vrec,
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
     EvdevPtr evdev = &cmt->evdev;
+    ValuatorMask* mask = rec->mask;
     int i;
     MtSlotPtr slot;
     struct HardwareState hwstate = { 0 };
     int current_finger;
+    bool has_gesture_fingers = false;
 
-    if (!rec->interpreter)
+    if (!rec->interpreter || ! rec->slot_states)
         return;
 
     /* zero initialize all FingerStates to clear out previous state. */
     memset(rec->fingers, 0,
            Event_Get_Slot_Count(evdev) * sizeof(struct FingerState));
 
+    /* clear out previous state from valuator */
+    valuator_mask_zero(mask);
+
+    if (cmt->props.raw_passthrough) {
+        for (i = 0; i < evstate->slot_count; i++) {
+            slot = &evstate->slots[i];
+
+            /* send TouchEnd for lifted fingers */
+            if (slot->tracking_id == -1) {
+                if (rec->slot_states[i] == SLOT_STATUS_RAW) {
+                    xf86PostTouchEvent(dev, i, XI_TouchEnd, 0, mask);
+                }
+                rec->slot_states[i] = SLOT_STATUS_FREE;
+                continue;
+            }
+
+            /*
+             * valuators 0 (CMT_AXIS_X) and 1 (CMT_AXIS_Y) are hardcoded into
+             * X.org as finger position, so we need to set those too.
+             */
+            valuator_mask_set_double(mask, CMT_AXIS_MT_POSITION_X,
+                                     slot->position_x);
+            valuator_mask_set_double(mask, CMT_AXIS_MT_POSITION_Y,
+                                     slot->position_y);
+            valuator_mask_set_double(mask, CMT_AXIS_MT_PRESSURE,
+                                     slot->pressure);
+            valuator_mask_set_double(mask, CMT_AXIS_MT_TOUCH_MAJOR,
+                                     slot->touch_major);
+            valuator_mask_set_double(mask, CMT_AXIS_TOUCH_TIMESTAMP,
+                                     StimeFromTimeval(tv));
+            valuator_mask_set_double(mask, CMT_AXIS_X, slot->position_x);
+            valuator_mask_set_double(mask, CMT_AXIS_Y, slot->position_y);
+
+            if (rec->slot_states[i] == SLOT_STATUS_RAW) {
+                xf86PostTouchEvent(dev, i, XI_TouchUpdate, 0, mask);
+            } else {
+                /* take over STATUS_GESTURE slots too */
+                if (rec->slot_states[i] == SLOT_STATUS_GESTURE)
+                    has_gesture_fingers = true;
+                xf86PostTouchEvent(dev, i, XI_TouchBegin, 0, mask);
+
+            }
+            rec->slot_states[i] = SLOT_STATUS_RAW;
+        }
+
+        if (has_gesture_fingers) {
+            /* push empty hardware state to clear interpreter state */
+            hwstate.timestamp = StimeFromTimeval(tv);
+            GestureInterpreterPushHardwareState(rec->interpreter, &hwstate);
+        }
+        return;
+    }
+
     current_finger = 0;
     for (i = 0; i < evstate->slot_count; i++) {
         slot = &evstate->slots[i];
-        if (slot->tracking_id == -1)
+        if (slot->tracking_id == -1) {
+            rec->slot_states[i] = SLOT_STATUS_FREE;
             continue;
+        }
+
+        if (rec->slot_states[i] == SLOT_STATUS_FREE) {
+            rec->slot_states[i] = SLOT_STATUS_GESTURE;
+        } else if (rec->slot_states[i] == SLOT_STATUS_RAW) {
+            /* ignore any fingers that are still present from raw mode */
+            continue;
+        }
+
         rec->fingers[current_finger].touch_major = (float)slot->touch_major;
         rec->fingers[current_finger].touch_minor = (float)slot->touch_minor;
         rec->fingers[current_finger].width_major = (float)slot->width_major;
@@ -254,6 +334,12 @@ static void Gesture_Gesture_Ready(void* client_data,
     DeviceIntPtr dev = rec->dev;
     ValuatorMask* mask = rec->mask;
     InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
+
+    if (cmt->props.raw_passthrough) {
+        DBG(info, "Gesture Suppressed");
+        return;
+    }
 
     DBG(info, "Gesture Start: %f End: %f \n",
         gesture->start_time, gesture->end_time);

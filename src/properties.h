@@ -15,14 +15,15 @@
 
 
 typedef struct {
-    int  area_left;
-    int  area_right;
-    int  area_top;
-    int  area_bottom;
-    int  res_y;
-    int  res_x;
-    int  orientation_minimum;
-    int  orientation_maximum;
+    int area_left;
+    int area_right;
+    int area_top;
+    int area_bottom;
+    int res_y;
+    int res_x;
+    int orientation_minimum;
+    int orientation_maximum;
+    int raw_passthrough;
     GesturesPropBool dump_debug_log;
 } CmtProperties, *CmtPropertiesPtr;
 

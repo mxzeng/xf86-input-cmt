@@ -42,6 +42,9 @@
 #define AXIS_LABEL_PROP_ABS_DBL_END_TIME   "Abs Dbl End Timestamp"
 
 #define AXIS_LABEL_PROP_ABS_FINGER_COUNT   "Abs Finger Count"
+
+#define AXIS_LABEL_PROP_ABS_TOUCH_TIMESTAMP "Touch Timestamp"
+
 /**
  * Forward declarations
  */
@@ -371,7 +374,12 @@ InitializeXDevice(DeviceIntPtr dev)
         AXIS_LABEL_PROP_ABS_DBL_METRICS_DATA2,
         AXIS_LABEL_PROP_ABS_DBL_START_TIME,
         AXIS_LABEL_PROP_ABS_DBL_END_TIME,
-        AXIS_LABEL_PROP_ABS_FINGER_COUNT
+        AXIS_LABEL_PROP_ABS_FINGER_COUNT,
+        AXIS_LABEL_PROP_ABS_MT_POSITION_X,
+        AXIS_LABEL_PROP_ABS_MT_POSITION_Y,
+        AXIS_LABEL_PROP_ABS_MT_PRESSURE,
+        AXIS_LABEL_PROP_ABS_MT_TOUCH_MAJOR,
+        AXIS_LABEL_PROP_ABS_TOUCH_TIMESTAMP,
     };
     static const char* btn_names[CMT_NUM_BUTTONS] = {
         BTN_LABEL_PROP_BTN_LEFT,
@@ -380,6 +388,8 @@ InitializeXDevice(DeviceIntPtr dev)
         BTN_LABEL_PROP_BTN_BACK,
         BTN_LABEL_PROP_BTN_FORWARD,
     };
+    InputInfoPtr info = dev->public.devicePrivate;
+    CmtDevicePtr cmt = info->private;
 
     Atom axes_labels[CMT_NUM_AXES] = { 0 };
     Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
@@ -401,6 +411,7 @@ InitializeXDevice(DeviceIntPtr dev)
     for (i = 0; i < CMT_NUM_AXES; i++)
         axes_labels[i] = InitAtom(axes_names[i]);
 
+    /* initialize mouse emulation valuators */
     InitPointerDeviceStruct((DevicePtr)dev,
                             map,
                             CMT_NUM_BUTTONS, btn_labels,
@@ -410,8 +421,44 @@ InitializeXDevice(DeviceIntPtr dev)
 
     for (i = 0; i < CMT_NUM_AXES; i++) {
         int mode = (i == CMT_AXIS_X || i == CMT_AXIS_Y) ? Relative : Absolute;
+        if (i >= CMT_AXIS_MT_POSITION_X)
+            break;
         xf86InitValuatorAxisStruct(
             dev, i, axes_labels[i], -1, -1, 1, 0, 1, mode);
+        xf86InitValuatorDefaults(dev, i);
+    }
+
+    /* initialize raw touch valuators */
+    InitTouchClassDeviceStruct(dev, Event_Get_Slot_Count(&cmt->evdev),
+                               XIDependentTouch, CMT_NUM_MT_AXES);
+
+    for (i = 0; i < CMT_NUM_AXES; i++) {
+        int mode = (i == CMT_AXIS_X || i == CMT_AXIS_Y) ? Relative : Absolute;
+        int input_axis = 0;
+        if (i == CMT_AXIS_TOUCH_TIMESTAMP) {
+            xf86InitValuatorAxisStruct(dev, i, axes_labels[i],
+                0, INT_MAX, 1, 0, 1, Absolute);
+            continue;
+        }
+
+        if (i == CMT_AXIS_MT_POSITION_X)
+            input_axis = ABS_MT_POSITION_X;
+        else if (i == CMT_AXIS_MT_POSITION_Y)
+            input_axis = ABS_MT_POSITION_Y;
+        else if (i == CMT_AXIS_MT_PRESSURE)
+            input_axis = ABS_MT_PRESSURE;
+        else if (i == CMT_AXIS_MT_TOUCH_MAJOR)
+            input_axis = ABS_MT_TOUCH_MAJOR;
+        else
+            continue;
+        xf86InitValuatorAxisStruct(
+                dev, i, axes_labels[i],
+                cmt->evdev.info.absinfo[input_axis].minimum,
+                cmt->evdev.info.absinfo[input_axis].maximum,
+                cmt->evdev.info.absinfo[input_axis].resolution,
+                0,
+                cmt->evdev.info.absinfo[input_axis].resolution,
+                mode);
         xf86InitValuatorDefaults(dev, i);
     }
 
