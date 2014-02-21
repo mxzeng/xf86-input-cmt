@@ -14,6 +14,15 @@
 #include "cmt.h"
 #include "properties.h"
 
+// Helper for bit operations
+#define LONG_BITS (sizeof(long) * 8)
+
+// Implementation of inline bit operations
+static inline bool TestBit(int bit, unsigned long* array)
+{
+    return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
+}
+
 /*
  * Gestures timer functions
  */
@@ -126,6 +135,8 @@ Gesture_Device_Init(GesturePtr rec, DeviceIntPtr dev)
     hwprops.support_semi_mt = Event_Get_Semi_MT(evdev);
     /* buttonpad means a physical button under the touch surface */
     hwprops.is_button_pad   = Event_Get_Button_Pad(evdev);
+    hwprops.has_wheel       = TestBit(REL_WHEEL, evdev->info.rel_bitmask) ||
+                              TestBit(REL_HWHEEL, evdev->info.rel_bitmask);
 
     GestureInterpreterSetPropProvider(rec->interpreter, &prop_provider,
                                       rec->dev);
