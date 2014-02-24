@@ -23,6 +23,18 @@ static inline bool TestBit(int bit, unsigned long* array)
     return !!(array[bit / LONG_BITS] & (1L << (bit % LONG_BITS)));
 }
 
+// This array maps input_event button types to gestures buttons
+#define EVDEV_BUTTON_MAP_SIZE 7
+static const int kEvdevButtonMap[EVDEV_BUTTON_MAP_SIZE][2] = {
+    {BTN_LEFT, GESTURES_BUTTON_LEFT},
+    {BTN_MIDDLE, GESTURES_BUTTON_MIDDLE},
+    {BTN_RIGHT, GESTURES_BUTTON_RIGHT},
+    {BTN_BACK, GESTURES_BUTTON_BACK},
+    {BTN_SIDE, GESTURES_BUTTON_BACK},
+    {BTN_FORWARD, GESTURES_BUTTON_FORWARD},
+    {BTN_EXTRA, GESTURES_BUTTON_FORWARD}
+};
+
 /*
  * Gestures timer functions
  */
@@ -281,12 +293,12 @@ Gesture_Process_Slots(void* vrec,
         current_finger++;
     }
     hwstate.timestamp = StimeFromTimeval(tv);
-    if (Event_Get_Button_Left(evdev))
-        hwstate.buttons_down |= GESTURES_BUTTON_LEFT;
-    if (Event_Get_Button_Middle(evdev))
-        hwstate.buttons_down |= GESTURES_BUTTON_MIDDLE;
-    if (Event_Get_Button_Right(evdev))
-        hwstate.buttons_down |= GESTURES_BUTTON_RIGHT;
+
+    for (i = 0; i < EVDEV_BUTTON_MAP_SIZE; ++i) {
+        if (Event_Get_Button(evdev, kEvdevButtonMap[i][0]))
+            hwstate.buttons_down |= kEvdevButtonMap[i][1];
+    }
+
     hwstate.touch_cnt = Event_Get_Touch_Count(evdev);
     hwstate.finger_cnt = current_finger;
     hwstate.fingers = rec->fingers;
@@ -402,12 +414,20 @@ static void Gesture_Gesture_Ready(void* client_data,
                 xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 1, mask);
             if (buttons->down & GESTURES_BUTTON_RIGHT)
                 xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 1, mask);
+            if (buttons->down & GESTURES_BUTTON_BACK)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_BACK, 1, mask);
+            if (buttons->down & GESTURES_BUTTON_FORWARD)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_FORWARD, 1, mask);
             if (buttons->up & GESTURES_BUTTON_LEFT)
                 xf86PostButtonEventM(dev, TRUE, CMT_BTN_LEFT, 0, mask);
             if (buttons->up & GESTURES_BUTTON_MIDDLE)
                 xf86PostButtonEventM(dev, TRUE, CMT_BTN_MIDDLE, 0, mask);
             if (buttons->up & GESTURES_BUTTON_RIGHT)
                 xf86PostButtonEventM(dev, TRUE, CMT_BTN_RIGHT, 0, mask);
+            if (buttons->up & GESTURES_BUTTON_BACK)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_BACK, 0, mask);
+            if (buttons->up & GESTURES_BUTTON_FORWARD)
+                xf86PostButtonEventM(dev, TRUE, CMT_BTN_FORWARD, 0, mask);
             break;
         }
         case kGestureTypeFling: {
