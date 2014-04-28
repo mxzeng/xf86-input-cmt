@@ -19,6 +19,7 @@
 #include <X11/Xatom.h>
 #include <xf86Xinput.h>
 #include <xf86_OSproc.h>
+#include <xkbsrv.h>
 #include <xserver-properties.h>
 
 #include "properties.h"
@@ -353,6 +354,11 @@ PointerCtrl(DeviceIntPtr device, PtrCtrl *ctrl)
 {
 }
 
+static void
+KeyboardCtrl(DeviceIntPtr device, KeybdCtrl *ctrl)
+{
+}
+
 static Atom
 InitAtom(const char* name)
 {
@@ -397,6 +403,7 @@ InitializeXDevice(DeviceIntPtr dev)
     InputInfoPtr info = dev->public.devicePrivate;
     CmtDevicePtr cmt = info->private;
 
+    XkbRMLVOSet rmlvo = { 0 };
     Atom axes_labels[CMT_NUM_AXES] = { 0 };
     Atom btn_labels[CMT_NUM_BUTTONS] = { 0 };
     /* Map our button numbers to standard ones. */
@@ -467,6 +474,18 @@ InitializeXDevice(DeviceIntPtr dev)
                 mode);
         xf86InitValuatorDefaults(dev, i);
     }
+
+    /* Initialize keyboard device struct. Based on xf86-input-evdev,
+       do not allow any rule/layout/etc changes. */
+    xf86ReplaceStrOption(info->options, "xkb_rules", "evdev");
+    rmlvo.rules = xf86SetStrOption(info->options, "xkb_rules", NULL);
+    rmlvo.model = xf86SetStrOption(info->options, "xkb_model", NULL);
+    rmlvo.layout = xf86SetStrOption(info->options, "xkb_layout", NULL);
+    rmlvo.variant = xf86SetStrOption(info->options, "xkb_variant", NULL);
+    rmlvo.options = xf86SetStrOption(info->options, "xkb_options", NULL);
+
+    InitKeyboardDeviceStruct(dev, &rmlvo, NULL, KeyboardCtrl);
+    XkbFreeRMLVOSet(&rmlvo, FALSE);
 
     return Success;
 }
