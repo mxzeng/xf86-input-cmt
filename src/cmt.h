@@ -82,6 +82,7 @@ typedef struct {
 
     char* device;
     long  handlers;
+    unsigned long prev_key_state[NLONGS(KEY_CNT)];
 } CmtDeviceRec, *CmtDevicePtr;
 
 #endif

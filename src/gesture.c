@@ -35,6 +35,9 @@ static const int kEvdevButtonMap[EVDEV_BUTTON_MAP_SIZE][2] = {
     {BTN_EXTRA, GESTURES_BUTTON_FORWARD}
 };
 
+// Conversion from kernel key codes to xorg key codes
+#define MIN_KEYCODE 8
+
 /*
  * Gestures timer functions
  */
@@ -205,10 +208,28 @@ Gesture_Process_Slots(void* vrec,
     struct HardwareState hwstate = { 0 };
     int current_finger;
     bool has_gesture_fingers = false;
+    unsigned long key_state_diff[NLONGS(KEY_CNT)];
+    int code;
+    int value;
 
     if (!rec->interpreter || ! rec->slot_states)
         return;
 
+    /* handle changed keys */
+    for (i = 0; i < NLONGS(KEY_CNT); ++i) {
+        key_state_diff[i] = evdev->key_state_bitmask[i] ^
+                            cmt->prev_key_state[i];
+    }
+    for (i = 0; i < KEY_CNT; ++i) {
+        if (TestBit(i, key_state_diff)) {
+            code = i + MIN_KEYCODE;
+            value = TestBit(i, evdev->key_state_bitmask);
+            xf86PostKeyboardEvent(dev, code, value);
+        }
+    }
+    for (i = 0; i < NLONGS(KEY_CNT); ++i) {
+        cmt->prev_key_state[i] = evdev->key_state_bitmask[i];
+    }
     /* zero initialize all FingerStates to clear out previous state. */
     memset(rec->fingers, 0,
            Event_Get_Slot_Count(evdev) * sizeof(struct FingerState));
