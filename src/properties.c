@@ -255,7 +255,10 @@ PropSet_Bool(DeviceIntPtr dev, GesturesProp* prop, XIPropertyValuePtr val,
     if (!checkonly) {
         for (i = 0; i < prop->count; i++) {
             prop->val.b[i] = !!(((CARD8*)val->data)[i]);
-            DBG(info, "\"%s\"[%d] = %s\n", NameForAtom(prop->atom), i,
+            // todo(denniskempin): switch back to DBG level
+            // The verbosity of this call has been increased for tracking
+            // down crbug.com/374867
+            ERR(info, "\"%s\"[%d] = %s\n", NameForAtom(prop->atom), i,
                 *prop->val.b ? "True" : "False");
         }
     }
